@@ -16,6 +16,7 @@
 (require 'transient)
 (require 'ansi-color)
 (require 'toml)
+(require 'project)
 
 (defun uv-init (directory &optional args)
   (interactive
@@ -24,7 +25,7 @@
                       (read-directory-name "Create project in: ")))))
      (append (list directory) (list (transient-args transient-current-command)))))
   (let ((args (append (uv--quote-string-transient-args args) (list directory))))
-    (compile (concat "uv init " (string-join args " ")) t)))
+    (uv--do-command (concat "uv init " (string-join args " ")))))
 
 (defun uv-init-here (&optional args)
   (interactive
@@ -56,7 +57,7 @@
 
 (defun uv-venv (&optional args)
   (interactive (list (transient-args transient-current-command)))
-  (compile (string-trim-right (concat "uv venv " (string-join args " "))) t))
+  (uv--do-command (string-trim-right (concat "uv venv " (string-join args " ")))))
 
 (defun uv-available-python-versions ()
   (sort (mapcar (lambda (python) (gethash "version" python))
@@ -97,7 +98,7 @@
    (let ((package (read-string "Package name: ")))
      (append (list package) (list (transient-args transient-current-command)))))
   (let ((args (when args (concat (string-join args " ") " "))))
-    (compile (concat "uv add " args  package) t)))
+    (uv--do-command (concat "uv add " args  package))))
 
 
 (defun uv--known-dependency-groups ()
@@ -127,7 +128,7 @@
   (interactive
    (when transient-current-command
      (list (transient-args transient-current-command))))
-  (compile (concat "uv sync " (string-join args " ")) t))
+  (uv--do-command (concat "uv sync " (string-join args " "))))
 
 
 (transient-define-prefix uv-sync-menu ()
@@ -164,5 +165,9 @@
    ("a" "add – Add dependencies to the project" uv-add-menu)
    ("s" "sync – Update the project's environment" uv-sync-menu)])
 
+
+(defun uv--do-command (cmd)
+  (let ((default-directory (project-root (project-current))))
+    (compile cmd t)))
 
 (provide 'uv)
