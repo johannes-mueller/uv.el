@@ -71,3 +71,8 @@
                (toml:read-from-file (file) ((:input '("/foo/bar/project/pyproject.toml")
                                              :output '(("project" ("version" . "0.1.0")))))))
     (should (equal (uv--known-dependency-groups) nil))))
+
+
+(ert-deftest uv-run-command ()
+  (mocker-let ((compile (cmd comint) ((:input '("uv run foo-command" t)))))
+    (uv-run "foo-command")))

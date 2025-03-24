@@ -140,6 +140,20 @@
    ("RET" "Run uv sync" uv-sync)])
 
 
+(defun uv-run (command)
+  (interactive
+   (let ((command (read-string "Command: ")))
+     (list command)))
+  (uv--do-command (concat "uv run " command)))
+
+
+(transient-define-prefix uv-run-menu ()
+  "Run a command or script"
+  :show-help (lambda (obj) (uv--show-help "run"))
+  ["run"
+   ("RET" "Run" uv-run)])
+
+
 (defun uv--quote-string-transient-args (args)
   (mapcar (lambda (arg)
             (save-match-data
@@ -157,13 +171,15 @@
       (compilation-mode))
     (display-buffer buffer)))
 
+
 (transient-define-prefix uv-menu ()
   :show-help (lambda (obj) (uv--show-help ""))
   ["Commands:"
    ("i" "init – Initialize a project" uv-init-menu)
    ("v" "venv – Create a virtual environment" uv-venv-menu)
    ("a" "add – Add dependencies to the project" uv-add-menu)
-   ("s" "sync – Update the project's environment" uv-sync-menu)])
+   ("s" "sync – Update the project's environment" uv-sync-menu)
+   ("r" "run – Run a command or script" uv-run-menu)])
 
 
 (defun uv--do-command (cmd)
