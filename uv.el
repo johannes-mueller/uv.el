@@ -407,17 +407,25 @@ suitable.  Use `uv-sync' instead."
 (transient-define-prefix uv-tool-run ()
   "Run a tool by `uv tool run'"
   :show-help (lambda (obj (uv--show-help "tool run")))
-  ["Options"
-   ("f" "Use a the given package to provide the command" "--from "
-    :prompt "From package: "
-    :class transient-option
-    :reader (lambda (prompt initial history)
-              (read-string prompt initial history)))
-   ("w" "Run with the given packages installed" "--with "
-    :prompt "With packages (comma separated): "
-    :class transient-option
-    :reader (lambda (prompt initial history)
+  [["Options"
+    ("f" "Use a the given package to provide the command" "--from "
+     :prompt "From package: "
+     :class transient-option
+     :reader (lambda (prompt initial history)
+               (read-string prompt initial history)))
+    ("w" "Run with the given packages installed" "--with "
+     :prompt "With packages (comma separated): "
+     :class transient-option
+     :reader (lambda (prompt initial history)
                (read-string prompt initial history)))]
+   ["Cache options"
+    ("nc" "Do not use the cache" "--no-cache")
+    ("r" "Refresh all cached data" "--refresh")
+    ("R" "Refresh given package" "--refresh-package "
+     :prompt "Refresh package: "
+     :class transient-option
+     :reader (lambda (prompt initial history)
+               (read-string prompt initial history)))]]
   ["tool run"
    ("RET" "tool run" uv-tool-run-cmd)])
 
