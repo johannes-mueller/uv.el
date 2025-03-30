@@ -422,6 +422,19 @@ suitable.  Use `uv-sync' instead."
    ("RET" "tool run" uv-tool-run-cmd)])
 
 
+;;;###autoload
+(defun uv-cache-clean ()
+  "Clean the uv cache."
+  (interactive)
+  (uv--do-command "uv cache clean"))
+
+
+;;;###autoload
+(defun uv-cache-prune ()
+  "Prune the uv cache."
+  (interactive)
+  (uv--do-command "uv cache prune"))
+
 
 (defun uv--quote-string-transient-args (args)
   "Preprocess transient ARGS to append them to a uv command."
