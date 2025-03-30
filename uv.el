@@ -400,7 +400,7 @@ suitable.  Use `uv-sync' instead."
      (append (list tool)
              (when transient-current-command (list (transient-args transient-current-command))))))
   (let ((args (when args (concat (string-join args " ") " "))))
-    (uv--do-command (concat "uv tool run " args tool))))
+    (ansi-term (concat "uv tool run " args tool))))
 
 
  ;;;###autoload (autoload 'uv-tool-run "uv" nil t)
@@ -408,7 +408,16 @@ suitable.  Use `uv-sync' instead."
   "Run a tool by `uv tool run'"
   :show-help (lambda (obj (uv--show-help "tool run")))
   ["Options"
-   ("w" "Include the following extra")]
+   ("f" "Use a the given package to provide the command" "--from "
+    :prompt "From package: "
+    :class transient-option
+    :reader (lambda (prompt initial history)
+              (read-string prompt initial history)))
+   ("w" "Run with the given packages installed" "--with "
+    :prompt "With packages (comma separated): "
+    :class transient-option
+    :reader (lambda (prompt initial history)
+               (read-string prompt initial history)))]
   ["tool run"
    ("RET" "tool run" uv-tool-run-cmd)])
 
@@ -476,6 +485,7 @@ suitable.  Use `uv-lock' instead."
    ("r" "remove – Remove dependencies from the project" uv-remove)
    ("s" "sync – Update the project's environment" uv-sync)
    ("l" "lock – Update the project's lockfile" uv-lock)
+   ("t" "tool run – run a python tool" uv-tool-run)
    ("R" "run – Run a command or script" uv-run)])
 
 (defun uv--do-command (cmd)
