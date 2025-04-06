@@ -344,6 +344,30 @@ suitable.  Use `uv-sync' instead."
    ("d" "with dev dependency group" uv--toggle-dev-group)
    ])
 
+(defconst uv--cache-options
+  ["Cache options"
+   ("nc" "Do not use the cache" "--no-cache")
+   ("r" "Refresh all cached data" "--refresh")
+   ("R" "Refresh given package" "--refresh-package "
+    :prompt "Refresh package: "
+    :class transient-option
+    :reader (lambda (prompt initial history)
+              (read-string prompt initial history)))])
+
+(defconst uv--resolver-options
+  ["Resolver options"
+   ("U" "Allow package upgrades" "--upgrade")
+   ("P" "Allow upgrade for given package" "--package-upgrade "
+    :prompt "Allow upgrade for package: "
+    :class transient-option
+    :reader (lambda (prompt initial history)
+              (read-string prompt initial history)))
+   ("s" "Resplution strategy" "--resolution "
+    :class transient-switches
+    :argument-format "--resolution %s"
+    :argument-regexp "--resolution \\(.*\\)"
+    :choices ("highest" "lowest" "lowest-direct"))])
+
  ;;;###autoload (autoload 'uv-sync "uv" nil t)
 (transient-define-prefix uv-sync ()
   "Update the project's environment"
@@ -354,7 +378,9 @@ suitable.  Use `uv-sync' instead."
     ("i" "Do not remove extraneous packages." "--inexact")
     ("a" "Sync into active virtual environment." "--active")
     ("l" "Assert that `uv.lock' will remain unchanged." "--locked")
-    ("f" "Sync without updating `uv.lock'" "--frozen")]]
+    ("f" "Sync without updating `uv.lock'" "--frozen")]
+   uv--cache-options
+   uv--resolver-options]
   ["sync"
    ("RET" "Run uv sync" uv-sync-cmd)])
 
@@ -421,14 +447,8 @@ suitable.  Use `uv-sync' instead."
      :class transient-option
      :reader (lambda (prompt initial history)
                (read-string prompt initial history)))]
-   ["Cache options"
-    ("nc" "Do not use the cache" "--no-cache")
-    ("r" "Refresh all cached data" "--refresh")
-    ("R" "Refresh given package" "--refresh-package "
-     :prompt "Refresh package: "
-     :class transient-option
-     :reader (lambda (prompt initial history)
-               (read-string prompt initial history)))]]
+   uv--cache-options
+   uv--resolver-options]
   ["tool run"
    ("RET" "tool run" uv-tool-run-cmd)])
 
