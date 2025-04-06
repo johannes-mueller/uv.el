@@ -25,7 +25,7 @@
 
 (require 'transient)
 (require 'ansi-color)
-;(require 'tomlparse)
+(require 'tomlparse)
 (require 'project)
 (require 'subr-x)
 
