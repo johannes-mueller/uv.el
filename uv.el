@@ -25,9 +25,9 @@
 
 (require 'transient)
 (require 'ansi-color)
-(require 'toml)
+;(require 'tomlparse)
 (require 'project)
-
+(require 'subr-x)
 
 (defclass uv--transient-multiswitch (transient-argument)
   ((scope :initarg :scope))
@@ -98,7 +98,7 @@ suitable.  Use `uv-init' instead."
 (transient-define-argument uv--select-python-version ()
   "Selector for the python version"
   :key "-p"
-  :argument "--python"
+  :argument "--python "
   :description "Python version"
   :class transient-option
   :reader (lambda (prompt initial history)
@@ -181,28 +181,31 @@ suitable.  Use `uv-venv' instead."
 (defun uv--known-dependency-groups ()
   "Determine the projects known dependency-groups from pyproject.toml."
   (let* ((pyproject-file (concat (file-name-as-directory (project-root (project-current))) "pyproject.toml"))
-         (pyproject-data (toml:read-from-file pyproject-file)))
-    (mapcar 'car (alist-get "dependency-groups" pyproject-data nil nil #'equal))))
+         (pyproject-data (tomlparse-file pyproject-file)))
+    (when-let ((ht (gethash "dependency-groups" pyproject-data)))
+      (hash-table-keys ht))))
 
 
 (defun uv--known-extras ()
   "Determine the projects known extras from pyproject.toml."
   (let* ((pyproject-file (concat (file-name-as-directory (project-root (project-current))) "pyproject.toml"))
-         (pyproject-data (toml:read-from-file pyproject-file))
-         (project-entry (alist-get "project" pyproject-data nil nil #'equal)))
-    (mapcar 'car (alist-get "optional-dependencies" project-entry nil nil #'equal))))
+         (pyproject-data (tomlparse-file pyproject-file))
+         (project-entry (gethash "project" pyproject-data)))
+    (when-let ((ht (gethash "optional-dependencies" project-entry)))
+      (hash-table-keys ht))))
 
 
 (defun uv--known-dependencies ()
   "Determine the projects known extras from pyproject.toml."
   (let* ((pyproject-file (concat (file-name-as-directory (project-root (project-current))) "pyproject.toml"))
-         (pyproject-data (toml:read-from-file pyproject-file))
-         (project-entry (alist-get "project" pyproject-data nil nil #'equal)))
-    (pcase (uv--group-arg (transient-args transient-current-command))
-      ((and (pred stringp) group)
-       (alist-get group
-                  (alist-get "dependency-groups" pyproject-data nil nil #'equal) nil nil #'equal))
-      (_ (alist-get "dependencies" project-entry nil nil #'equal)))))
+         (pyproject-data (tomlparse-file pyproject-file))
+         (project-entry (gethash "project" pyproject-data)))
+    (append
+     (pcase (uv--group-arg (transient-args transient-current-command))
+       ((and (pred stringp) group)
+        (gethash group (gethash "dependency-groups" pyproject-data)))
+       (_ (gethash "dependencies" project-entry)))
+     nil)))
 
 
 (defconst uv--dependency-group
