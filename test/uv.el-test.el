@@ -24,16 +24,19 @@
     (uv-init-cmd "foo-bar" '("--no-readme"))))
 
 (ert-deftest uv-available-python-versions-sorted ()
-  (mocker-let ((shell-command-to-string (cmd) ((:input '("uv python list --output-format=json")                                               :output "[{\"version\": \"3.7.9\"}, {\"version\": \"3.13.2\"}, {\"version\": \"3.13.1\"}]"))))
+  (mocker-let ((shell-command-to-string (cmd) ((:input '("uv python list --output-format=json")
+                                                :output "[{\"version\": \"3.7.9\"}, {\"version\": \"3.13.2\"}, {\"version\": \"3.13.1\"}]"))))
     (should (equal (uv--available-python-versions) '("3.13.2" "3.13.1" "3.7.9")))))
 
 (ert-deftest uv-available-python-versions-sorted-non-unique ()
-  (mocker-let ((shell-command-to-string (cmd) ((:input '("uv python list --output-format=json")                                               :output "[{\"version\": \"3.13.2\"}, {\"version\": \"3.13.2\"}, {\"version\": \"3.13.1\"}]"))))
+  (mocker-let ((shell-command-to-string (cmd) ((:input '("uv python list --output-format=json")
+                                                :output "[{\"version\": \"3.13.2\"}, {\"version\": \"3.13.2\"}, {\"version\": \"3.13.1\"}]"))))
     (should (equal (uv--available-python-versions) '("3.13.2" "3.13.1")))))
 
 
 (ert-deftest uv-available-python-versions-unsorted ()
-  (mocker-let ((shell-command-to-string (cmd) ((:input '("uv python list --output-format=json")                                               :output "[{\"version\": \"3.13.2\"}, {\"version\": \"3.13.1\"}, {\"version\": \"3.14.0b3\"}, {\"version\": \"3.14.0rc1\"}, {\"version\": \"3.12.9\"}, {\"version\": \"3.14.0a4\"}, {\"version\": \"3.14.0a5\"}, {\"version\": \"3.7.9\"}]"))))
+  (mocker-let ((shell-command-to-string (cmd) ((:input '("uv python list --output-format=json")
+                                                :output "[{\"version\": \"3.13.2\"}, {\"version\": \"3.13.1\"}, {\"version\": \"3.14.0b3\"}, {\"version\": \"3.14.0rc1\"}, {\"version\": \"3.12.9\"}, {\"version\": \"3.14.0a4\"}, {\"version\": \"3.14.0a5\"}, {\"version\": \"3.7.9\"}]"))))
     (should (equal (uv--available-python-versions) '("3.13.2" "3.13.1" "3.12.9" "3.7.9" "3.14.0rc1" "3.14.0b3" "3.14.0a4" "3.14.0a5")))))
 
 ;; (ert-deftest uv-available-python-versions-minor-releases ()
@@ -101,7 +104,9 @@
                                         :output (alist-to-hash-table
                                                  '(("project"
                                                     ("version" . "0.1.0")
-                                                    ("optional-dependencies" ("my-extra" . ["scipy"]) ("dev" . ["pytest>=8.3.5"])))))))))
+                                                    ("optional-dependencies"
+                                                     ("my-extra" . ["scipy"])
+                                                     ("dev" . ["pytest>=8.3.5"])))))))))
     (should (equal-set (uv--known-extras) '("my-extra" "dev")))))
 
 
@@ -187,6 +192,24 @@
       (should (equal (uv--known-dependencies) '("pytest>=8.3.5" "freezegun==1.2.3"))))))
 
 
+(ert-deftest known-dependencies-dependencies-extra ()
+  (let ((transient-current-command 'uv-remove-menu))
+    (mocker-let ((project-current () ((:output (cons 'project "/foo/bar/project"))))
+                 (project-root (project) ((:input '((project . "/foo/bar/project"))
+                                           :output "/foo/bar/project")))
+                 (tomlparse-file (file) ((:input '("/foo/bar/project/pyproject.toml")
+                                          :output (alist-to-hash-table
+                                                   '(("project"
+                                                      ("version" . "0.1.0")
+                                                      ("dependencies" . ["numpy"])
+                                                      ("optional-dependencies"
+                                                       ("my-extra" . ["scipy"])
+                                                       ("dev" . ["pytest>=8.3.5"]))))))))
+                 (transient-args (transient-cmd) ((:input '(uv-remove-menu)
+                                                   :output '("--optional my-extra")))))
+      (should (equal (uv--known-dependencies) '("scipy"))))))
+
+
 (ert-deftest uv-run-command ()
   (mocker-let ((compile (cmd comint) ((:input '("uv run foo-command" t)))))
     (uv-run-cmd "foo-command")))
@@ -199,13 +222,13 @@
   (should (eq (uv--group-arg '("--foo bar")) nil)))
 
 (ert-deftest uv-group-arg-group ()
-  (should (equal (uv--group-arg '("--foo bar" "--group foo")) "foo")))
+  (should (equal (uv--group-arg '("--foo bar" "--group foo")) `(group . "foo"))))
 
 (ert-deftest uv-group-arg-extra ()
-  (should (equal (uv--group-arg '("--foo bar" "--optional foo")) "foo")))
+  (should (equal (uv--group-arg '("--foo bar" "--optional foo")) `(extra . "foo"))))
 
 (ert-deftest uv-group-arg-dev ()
-  (should (equal (uv--group-arg '("--dev")) "dev")))
+  (should (equal (uv--group-arg '("--dev")) `(group . "dev"))))
 
 
 (ert-deftest known-locked-packages-empty ()

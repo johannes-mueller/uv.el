@@ -5,7 +5,7 @@
 ;; Version: 0.1.0
 ;; License: GPLv3
 ;; SPDX-License-Identifier: GPL-3.0-only
-;; Package-Requires: ((emacs "29.1"))
+;; Package-Requires: ((emacs "29.1") (tomlparse "0.0.1"))
 
 ;;; Commentary:
 
@@ -202,8 +202,8 @@ suitable.  Use `uv-venv' instead."
          (project-entry (gethash "project" pyproject-data)))
     (append
      (pcase (uv--group-arg (transient-args transient-current-command))
-       ((and (pred stringp) group)
-        (gethash group (gethash "dependency-groups" pyproject-data)))
+       (`(group . ,group) (gethash group (gethash "dependency-groups" pyproject-data)))
+       (`(extra . ,extra) (gethash extra (gethash "optional-dependencies" project-entry)))
        (_ (gethash "dependencies" project-entry)))
      nil)))
 
@@ -522,11 +522,12 @@ suitable.  Use `uv-lock' instead."
   (pcase args
     ((app (seq-find (lambda (cand) (string-prefix-p "--group " cand)))
           (and (pred stringp) group))
-     (substring group (length "--group ")))
+     `(group . ,(substring group (length "--group "))))
     ((app (seq-find (lambda (cand) (string-prefix-p "--optional " cand)))
           (and (pred stringp) extra))
-     (substring extra (length "--optional ")))
-    ((pred (transient-arg-value "--dev")) "dev")))
+     `(extra . ,(substring extra (length "--optional "))))
+    ((pred (transient-arg-value "--dev"))
+     '(group . "dev"))))
 
 (cl-defmethod transient-infix-read ((obj uv--transient-multiswitch))
   "Implement function `transient-infix-read' for OBJ."
