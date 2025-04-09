@@ -388,17 +388,23 @@ suitable.  Use `uv-sync' instead."
   "Determine candidate commands for `uv run'."
   (string-split (shell-command-to-string "uv run | sed -n 's/^- //p'")))
 
-(defun uv-run-cmd (command &optional args)
+
+
+(defun uv-run-cmd (command &optional interactive args)
   "Perform the `uv run' command to run COMMAND with ARGS.
 
 Only to be used directly when the default arguments of `uv sync' are
 suitable.  Use `uv-sync' instead."
-(interactive
-   (let ((command (completing-read "Command: " (uv--run-candidates))))
-     (append (list command)
-             (when transient-current-command (list (transient-args transient-current-command))))))
+  (interactive
+   (let* ((command (completing-read "Command: " (uv--run-candidates)))
+          (args (or (and transient-current-command (transient-args transient-current-command)) '()))
+          (interactive (seq-position args "interactive")))
+     (when interactive (setq args (seq-remove-at-position args interactive)))
+     (append (list command) `(,(and interactive t)) (list args))))
   (let ((args (when args (concat (string-join args " ") " "))))
-    (uv--do-command (concat "uv run " args command))))
+    (uv--do-command-maybe-interactive (concat "uv run " args command) interactive)))
+
+
 
  ;;;###autoload (autoload 'uv-run "uv" nil t)
 (transient-define-prefix uv-run ()
@@ -413,23 +419,26 @@ suitable.  Use `uv-sync' instead."
     ("a" "Run in the active virtual environment." "--active")
     ("l" "Assert that `uv.lock' will remain unchanged." "--locked")
     ("f" "Sync without updating `uv.lock'" "--frozen")
-    ("ns" "Do not sync the virtual environement" "--no-sync")]]
+    ("ns" "Do not sync the virtual environement" "--no-sync")
+    ("I" "Interactive: run in an ansi-term window rather than compile/comint" "interactive")]]
   ["run"
    ("RET" "Run" uv-run-cmd)])
 
 
 
-(defun uv-tool-run-cmd (tool &optional args)
+(defun uv-tool-run-cmd (tool &optional interactive args)
   "Perform the `uv tool' command to run COMMAND with ARGS.
 
 Only to be used directly when the default arguments of `uv sync' are
 suitable.  Use `uv-sync' instead."
 (interactive
- (let ((tool (read-string "Run tool: ")))
-     (append (list tool)
-             (when transient-current-command (list (transient-args transient-current-command))))))
+ (let* ((tool (read-string "Run tool: "))
+        (args (or (and transient-current-command (transient-args transient-current-command)) '()))
+        (interactive (seq-position args "interactive")))
+     (when interactive (setq args (seq-remove-at-position args interactive)))
+     (append (list tool) `(,(and interactive t)) (list args))))
   (let ((args (when args (concat (string-join args " ") " "))))
-    (ansi-term (concat "uv tool run " args tool))))
+    (uv--do-command-maybe-interactive (concat "uv tool run " args tool) interactive)))
 
 
  ;;;###autoload (autoload 'uv-tool-run "uv" nil t)
@@ -533,8 +542,15 @@ suitable.  Use `uv-lock' instead."
    ("R" "run – Run a command or script" uv-run)])
 
 (defun uv--do-command (cmd)
-  "Performs the command CMD in a compint compile buffer in the project's root dir."
+  "Perform the command CMD in a compint compile buffer in the project's root dir."
   (let ((default-directory (project-root (project-current))))
+    (compile cmd t)))
+
+(defun uv--do-command-maybe-interactive (cmd interactive)
+  "Perform the command CMD either as compile or if INTERACTIVE is non nil in `ansi-term'."
+  (let ((default-directory (project-root (project-current))))
+    (if interactive
+        (ansi-term cmd))
     (compile cmd t)))
 
 (defun uv--group-arg (args)

@@ -210,9 +210,22 @@
       (should (equal (uv--known-dependencies) '("scipy"))))))
 
 
-(ert-deftest uv-run-command ()
+(ert-deftest uv-run-command-compile ()
   (mocker-let ((compile (cmd comint) ((:input '("uv run foo-command" t)))))
     (uv-run-cmd "foo-command")))
+
+(ert-deftest uv-run-command-ansi-term ()
+  (mocker-let ((ansi-term (cmd) ((:input '("uv run foo-command")))))
+    (uv-run-cmd "foo-command" 'interactive)))
+
+
+(ert-deftest uv-tool-run-command-compile ()
+  (mocker-let ((compile (cmd comint) ((:input '("uv tool run foo-command" t)))))
+    (uv-tool-run-cmd "foo-command")))
+
+(ert-deftest uv-tool-run-command-ansi-term ()
+  (mocker-let ((ansi-term (cmd) ((:input '("uv tool run foo-command")))))
+    (uv-tool-run-cmd "foo-command" 'interactive)))
 
 
 (ert-deftest uv-group-arg-empty ()
