@@ -579,16 +579,20 @@ suitable.  Use `uv-lock' instead."
   "Implement function `transient-format-value' for OBJ.
 The list of selected items is formatted in a way to present it to the user.
 OJB is just the self reference."
-  (let ((enabled-items (oref obj value))
-        (choices (oref obj choices)))
+  (let* ((enabled-items (oref obj value))
+         (choices (funcall (oref obj choices)))
+         (needs-shortening (> (length choices) 5)))
+    (when needs-shortening
+      (setq choices (seq-filter (lambda (item) (member item enabled-items)) choices)))
     (concat
      (propertize "[" 'face 'transient-inactive-value)
      (mapconcat (lambda (item)
                   (if (member item enabled-items)
                       (propertize item 'face 'transient-value)
                     (propertize item 'face 'transient-inactive-value)))
-                (funcall choices)
+                choices
                 (propertize ", " 'face 'transient-inactive-value))
+     (when needs-shortening (propertize (if enabled-items ", ..." "...") 'face 'transient-inactive-value))
      (propertize "]" 'face 'transient-inactive-value))))
 
 (cl-defmethod transient-infix-value ((obj uv--transient-multiswitch))
