@@ -34,6 +34,13 @@
   "A `transient-argument' to select from a list of mutually non exclusive items.")
 
 
+(defvar uv--run-history (make-hash-table :test 'equal)
+  "A hash-table to store the history of uv runs for each project.")
+
+(defvar uv--tool-run-history (make-hash-table :test 'equal)
+  "A hash-table to store the history of uv tool runs for each project.")
+
+
 (defun uv-init-cmd (directory &optional args)
   "Perform the `uv init' command in DIRECTORY with ARGS.
 
@@ -388,7 +395,14 @@ suitable.  Use `uv-sync' instead."
   "Determine candidate commands for `uv run'."
   (string-split (shell-command-to-string "uv run | sed -n 's/^- //p'")))
 
+(defun uv--project-run-command-history ()
+  "Retrieve the run command history of the current project."
+  (gethash (project-current) uv--run-history))
 
+(defun uv--add-run-command-to-history (cmd)
+  "Add the command CMD to the run command history of the current project."
+  (let ((history (gethash (project-current) uv--run-history)))
+    (puthash (project-current) (push cmd history) uv--run-history)))
 
 (defun uv-run-cmd (command &optional interactive args)
   "Perform the `uv run' command to run COMMAND with ARGS.
@@ -396,14 +410,16 @@ suitable.  Use `uv-sync' instead."
 Only to be used directly when the default arguments of `uv sync' are
 suitable.  Use `uv-sync' instead."
   (interactive
-   (let* ((command (completing-read "Command: " (uv--run-candidates)))
+   (let* ((history (uv--project-run-command-history))
+          (prompt (format "Command%s: " (if history (format " (%s)" (car history)) "")))
+          (command (completing-read prompt (uv--run-candidates) nil nil nil '(history . 0) (car history)))
           (args (or (and transient-current-command (transient-args transient-current-command)) '()))
           (interactive (seq-position args "interactive")))
      (when interactive (setq args (seq-remove-at-position args interactive)))
      (append (list command) `(,(and interactive t)) (list args))))
   (let ((args (when args (concat (string-join args " ") " "))))
-    (uv--do-command-maybe-interactive (concat "uv run " args command) interactive)))
-
+    (uv--do-command-maybe-interactive (concat "uv run " args command) interactive)
+    (uv--add-run-command-to-history command)))
 
 
  ;;;###autoload (autoload 'uv-run "uv" nil t)
@@ -425,6 +441,14 @@ suitable.  Use `uv-sync' instead."
    ("RET" "Run" uv-run-cmd)])
 
 
+(defun uv--project-tool-run-command-history ()
+  "Retrieve the tool run command history of the current project."
+  (gethash (project-current) uv--tool-run-history))
+
+(defun uv--add-tool-run-command-to-history (cmd)
+  "Add the command CMD to the tool run command history of the current project."
+  (let ((history (gethash (project-current) uv--tool-run-history)))
+    (puthash (project-current) (push cmd history) uv--tool-run-history)))
 
 (defun uv-tool-run-cmd (tool &optional interactive args)
   "Perform the `uv tool' command to run COMMAND with ARGS.
@@ -432,13 +456,16 @@ suitable.  Use `uv-sync' instead."
 Only to be used directly when the default arguments of `uv sync' are
 suitable.  Use `uv-sync' instead."
 (interactive
- (let* ((tool (read-string "Run tool: "))
+ (let* ((history (uv--project-tool-run-command-history))
+        (prompt (format "Run tool%s: " (if history (format " (%s)" (car history)) "")))
+        (tool (read-string "Run tool: "))
         (args (or (and transient-current-command (transient-args transient-current-command)) '()))
         (interactive (seq-position args "interactive")))
      (when interactive (setq args (seq-remove-at-position args interactive)))
      (append (list tool) `(,(and interactive t)) (list args))))
   (let ((args (when args (concat (string-join args " ") " "))))
-    (uv--do-command-maybe-interactive (concat "uv tool run " args tool) interactive)))
+    (uv--do-command-maybe-interactive (concat "uv tool run " args tool) interactive)
+    (uv--add-tool-run-command-to-history tool)))
 
 
  ;;;###autoload (autoload 'uv-tool-run "uv" nil t)
@@ -550,8 +577,8 @@ suitable.  Use `uv-lock' instead."
   "Perform the command CMD either as compile or if INTERACTIVE is non nil in `ansi-term'."
   (let ((default-directory (project-root (project-current))))
     (if interactive
-        (ansi-term cmd))
-    (compile cmd t)))
+        (ansi-term cmd)
+    (compile cmd t))))
 
 (defun uv--group-arg (args)
   "Extract dependency groups and extras from transient ARGS."

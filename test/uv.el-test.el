@@ -218,6 +218,14 @@
   (mocker-let ((ansi-term (cmd) ((:input '("uv run foo-command")))))
     (uv-run-cmd "foo-command" 'interactive)))
 
+(ert-deftest uv-run-command-history ()
+  (mocker-let ((compile (cmd comint) ((:input '("uv run foo-command" t))))
+               (project-current () ((:input '() :output (cons 'project "/foo/bar/project"))))
+               (project-root (project) ((:input '((project . "/foo/bar/project"))
+                                         :output "/foo/bar/project"))))
+    (should-not (uv--project-run-command-history))
+    (uv-run-cmd "foo-command")
+    (should (equal (uv--project-run-command-history) '("foo-command")))))
 
 (ert-deftest uv-tool-run-command-compile ()
   (mocker-let ((compile (cmd comint) ((:input '("uv tool run foo-command" t)))))
@@ -227,6 +235,14 @@
   (mocker-let ((ansi-term (cmd) ((:input '("uv tool run foo-command")))))
     (uv-tool-run-cmd "foo-command" 'interactive)))
 
+(ert-deftest uv-tool-run-command-history ()
+  (mocker-let ((compile (cmd comint) ((:input '("uv tool run foo-command" t))))
+               (project-current () ((:input '() :output (cons 'project "/foo/bar/project"))))
+               (project-root (project) ((:input '((project . "/foo/bar/project"))
+                                         :output "/foo/bar/project"))))
+    (should-not (uv--project-tool-run-command-history))
+    (uv-tool-run-cmd "foo-command")
+    (should (equal (uv--project-tool-run-command-history) '("foo-command")))))
 
 (ert-deftest uv-group-arg-empty ()
   (should (eq (uv--group-arg '()) nil)))
