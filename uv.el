@@ -53,9 +53,8 @@ suitable.  Use `uv-init' instead."
      (append (list directory) (list (transient-args transient-current-command)))))
   (let ((args (append (uv--quote-string-transient-args args) (list directory))))
     (uv--do-command (concat "uv init " (string-join args " ")))
-                                        ;(project-switch-project directory)
-                                        ;(project-dired)
-    ))
+    (setq-local project-current-directory-override directory)
+    (call-interactively 'project-dired)))
 
 (defun uv-init-here-cmd (&optional args)
   "Perform the `uv init' command in the current directory with ARGS.
