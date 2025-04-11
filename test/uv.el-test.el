@@ -82,6 +82,7 @@
   (mocker-let ((project-current () ((:output (cons 'project "/foo/bar/project"))))
                (project-root (project) ((:input '((project . "/foo/bar/project"))
                                          :output "/foo/bar/project")))
+               (file-exists-p (file) ((:input '("/foo/bar/project/pyproject.toml") :output t)))
                (tomlparse-file (file) ((:input '("/foo/bar/project/pyproject.toml")
                                         :output (alist-to-hash-table
                                                  '(("project" ("version" . "0.1.0"))
@@ -93,6 +94,7 @@
   (mocker-let ((project-current () ((:output (cons 'project "/foo/bar/project"))))
                (project-root (project) ((:input '((project . "/foo/bar/project"))
                                         :output "/foo/bar/project")))
+               (file-exists-p (file) ((:input '("/foo/bar/project/pyproject.toml") :output t)))
                (tomlparse-file (file) ((:input '("/foo/bar/project/pyproject.toml")
                                         :output (alist-to-hash-table '(("project" ("version" . "0.1.0"))))))))
     (should (eq (uv--known-dependency-groups) nil))))
@@ -102,6 +104,7 @@
   (mocker-let ((project-current () ((:output (cons 'project "/foo/bar/project"))))
                (project-root (project) ((:input '((project . "/foo/bar/project"))
                                          :output "/foo/bar/project")))
+               (file-exists-p (file) ((:input '("/foo/bar/project/pyproject.toml") :output t)))
                (tomlparse-file (file) ((:input '("/foo/bar/project/pyproject.toml")
                                         :output (alist-to-hash-table
                                                  '(("project"
@@ -116,6 +119,7 @@
   (mocker-let ((project-current () ((:output (cons 'project "/foo/bar/project"))))
                (project-root (project) ((:input '((project . "/foo/bar/project"))
                                         :output "/foo/bar/project")))
+               (file-exists-p (file) ((:input '("/foo/bar/project/pyproject.toml") :output t)))
                (tomlparse-file (file) ((:input '("/foo/bar/project/pyproject.toml")
                                         :output (alist-to-hash-table
                                                  '(("project" ("version" . "0.1.0"))))))))
@@ -126,6 +130,7 @@
   (mocker-let ((project-current () ((:output (cons 'project "/foo/bar/project"))))
                (project-root (project) ((:input '((project . "/foo/bar/project"))
                                          :output "/foo/bar/project")))
+               (file-exists-p (file) ((:input '("/foo/bar/project/pyproject.toml") :output t)))
                (tomlparse-file (file) ((:input '("/foo/bar/project/pyproject.toml")
                                         :output (alist-to-hash-table
                                                  '(("project"
@@ -138,6 +143,7 @@
   (mocker-let ((project-current () ((:output (cons 'project "/foo/bar/project"))))
                (project-root (project) ((:input '((project . "/foo/bar/project"))
                                         :output "/foo/bar/project")))
+               (file-exists-p (file) ((:input '("/foo/bar/project/pyproject.toml") :output t)))
                (tomlparse-file (file) ((:input '("/foo/bar/project/pyproject.toml")
                                         :output (alist-to-hash-table
                                                  '(("project" ("version" . "0.1.0"))))))))
@@ -148,6 +154,7 @@
   (mocker-let ((project-current () ((:output (cons 'project "/foo/bar/project"))))
                (project-root (project) ((:input '((project . "/foo/bar/project"))
                                          :output "/foo/bar/project")))
+               (file-exists-p (file) ((:input '("/foo/bar/project/pyproject.toml") :output t)))
                (tomlparse-file (file) ((:input '("/foo/bar/project/pyproject.toml")
                                         :output (alist-to-hash-table
                                                  '(("project"
@@ -164,6 +171,7 @@
     (mocker-let ((project-current () ((:output (cons 'project "/foo/bar/project"))))
                  (project-root (project) ((:input '((project . "/foo/bar/project"))
                                            :output "/foo/bar/project")))
+                 (file-exists-p (file) ((:input '("/foo/bar/project/pyproject.toml") :output t)))
                  (tomlparse-file (file) ((:input '("/foo/bar/project/pyproject.toml")
                                           :output (alist-to-hash-table
                                                    '(("project"
@@ -181,6 +189,7 @@
     (mocker-let ((project-current () ((:output (cons 'project "/foo/bar/project"))))
                  (project-root (project) ((:input '((project . "/foo/bar/project"))
                                            :output "/foo/bar/project")))
+                 (file-exists-p (file) ((:input '("/foo/bar/project/pyproject.toml") :output t)))
                  (tomlparse-file (file) ((:input '("/foo/bar/project/pyproject.toml")
                                           :output (alist-to-hash-table
                                                    '(("project"
@@ -199,6 +208,7 @@
     (mocker-let ((project-current () ((:output (cons 'project "/foo/bar/project"))))
                  (project-root (project) ((:input '((project . "/foo/bar/project"))
                                            :output "/foo/bar/project")))
+                 (file-exists-p (file) ((:input '("/foo/bar/project/pyproject.toml") :output t)))
                  (tomlparse-file (file) ((:input '("/foo/bar/project/pyproject.toml")
                                           :output (alist-to-hash-table
                                                    '(("project"

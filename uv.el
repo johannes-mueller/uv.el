@@ -183,19 +183,21 @@ suitable.  Use `uv-venv' instead."
   ["venv"
   ("RET" "Create the venv" uv-venv)])
 
+(defun uv--read-project-data ()
+  (let ((pyproject-file (concat (file-name-as-directory (project-root (project-current))) "pyproject.toml")))
+    (unless (file-exists-p pyproject-file)
+      (user-error "Current project does not seem to have a `pyproject.toml' file."))
+    (tomlparse-file pyproject-file)))
 
 (defun uv--known-dependency-groups ()
   "Determine the projects known dependency-groups from pyproject.toml."
-  (let* ((pyproject-file (concat (file-name-as-directory (project-root (project-current))) "pyproject.toml"))
-         (pyproject-data (tomlparse-file pyproject-file)))
+  (let ((pyproject-data (uv--read-project-data)))
     (when-let ((ht (gethash "dependency-groups" pyproject-data)))
       (hash-table-keys ht))))
 
-
 (defun uv--known-extras ()
   "Determine the projects known extras from pyproject.toml."
-  (let* ((pyproject-file (concat (file-name-as-directory (project-root (project-current))) "pyproject.toml"))
-         (pyproject-data (tomlparse-file pyproject-file))
+  (let* ((pyproject-data (uv--read-project-data))
          (project-entry (gethash "project" pyproject-data)))
     (when-let ((ht (gethash "optional-dependencies" project-entry)))
       (hash-table-keys ht))))
@@ -203,8 +205,7 @@ suitable.  Use `uv-venv' instead."
 
 (defun uv--known-dependencies ()
   "Determine the projects known extras from pyproject.toml."
-  (let* ((pyproject-file (concat (file-name-as-directory (project-root (project-current))) "pyproject.toml"))
-         (pyproject-data (tomlparse-file pyproject-file))
+  (let* ((pyproject-data (uv--read-project-data))
          (project-entry (gethash "project" pyproject-data)))
     (append
      (pcase (uv--group-arg (transient-args transient-current-command))
