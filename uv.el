@@ -226,7 +226,10 @@ suitable.  Use `uv-venv' instead."
     :prompt "Choose extra: "
     :class transient-option
     :reader (lambda (prompt initial history)
-              (completing-read prompt (uv--known-extras) initial nil)))]
+              (completing-read prompt (uv--known-extras) initial nil)))
+    ("a" "Sync into active virtual environment." "--active")
+    ("l" "Assert that `uv.lock' will remain unchanged." "--locked")
+    ("f" "Sync without updating `uv.lock'" "--frozen")]
   "Transient group to add and remove python dependencies.")
 
  ;;;###autoload (autoload 'uv-add "uv" nil t)
