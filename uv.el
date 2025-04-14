@@ -407,7 +407,7 @@ suitable.  Use `uv-sync' instead."
   (let ((history (gethash (project-current) uv--run-history)))
     (puthash (project-current) (push cmd history) uv--run-history)))
 
-(defun uv-run-cmd (command &optional interactive args)
+(defun uv-run-cmd (command &optional terminal args)
   "Perform the `uv run' command to run COMMAND with ARGS.
 
 Only to be used directly when the default arguments of `uv sync' are
@@ -417,11 +417,11 @@ suitable.  Use `uv-sync' instead."
           (prompt (format "Command%s: " (if history (format " (%s)" (car history)) "")))
           (command (completing-read prompt (uv--run-candidates) nil nil nil '(history . 0) (car history)))
           (args (or (and transient-current-command (transient-args transient-current-command)) '()))
-          (interactive (seq-position args "interactive")))
-     (when interactive (setq args (seq-remove-at-position args interactive)))
-     (append (list command) `(,(and interactive t)) (list args))))
+          (terminal (seq-position args "terminal")))
+     (when terminal (setq args (seq-remove-at-position args terminal)))
+     (append (list command) `(,(and terminal t)) (list args))))
   (let ((args (when args (concat (string-join args " ") " "))))
-    (uv--do-command-maybe-interactive (concat "uv run " args command) interactive)
+    (uv--do-command-maybe-terminal (concat "uv run " args command) terminal)
     (uv--add-run-command-to-history command)))
 
 
@@ -439,7 +439,7 @@ suitable.  Use `uv-sync' instead."
     ("l" "Assert that `uv.lock' will remain unchanged." "--locked")
     ("f" "Sync without updating `uv.lock'" "--frozen")
     ("ns" "Do not sync the virtual environement" "--no-sync")
-    ("I" "Interactive: run in an ansi-term window rather than compile/comint" "interactive")]]
+    ("T" "Interactive: run in an ansi-term window rather than compile/comint" "terminal")]]
   ["run"
    ("RET" "Run" uv-run-cmd)])
 
@@ -453,7 +453,7 @@ suitable.  Use `uv-sync' instead."
   (let ((history (gethash (project-current) uv--tool-run-history)))
     (puthash (project-current) (push cmd history) uv--tool-run-history)))
 
-(defun uv-tool-run-cmd (tool &optional interactive args)
+(defun uv-tool-run-cmd (tool &optional terminal args)
   "Perform the `uv tool' command to run COMMAND with ARGS.
 
 Only to be used directly when the default arguments of `uv sync' are
@@ -463,11 +463,11 @@ suitable.  Use `uv-sync' instead."
         (prompt (format "Run tool%s: " (if history (format " (%s)" (car history)) "")))
         (tool (read-string "Run tool: "))
         (args (or (and transient-current-command (transient-args transient-current-command)) '()))
-        (interactive (seq-position args "interactive")))
-     (when interactive (setq args (seq-remove-at-position args interactive)))
-     (append (list tool) `(,(and interactive t)) (list args))))
+        (terminal (seq-position args "terminal")))
+     (when terminal (setq args (seq-remove-at-position args terminal)))
+     (append (list tool) `(,(and terminal t)) (list args))))
   (let ((args (when args (concat (string-join args " ") " "))))
-    (uv--do-command-maybe-interactive (concat "uv tool run " args tool) interactive)
+    (uv--do-command-maybe-terminal (concat "uv tool run " args tool) terminal)
     (uv--add-tool-run-command-to-history tool)))
 
 
@@ -485,7 +485,8 @@ suitable.  Use `uv-sync' instead."
      :prompt "With packages (comma separated): "
      :class transient-option
      :reader (lambda (prompt initial history)
-               (read-string prompt initial history)))]
+               (read-string prompt initial history)))
+    ("T" "Interactive: run in an ansi-term window rather than compile/comint" "terminal")]
    uv--cache-options
    uv--resolver-options]
   ["tool run"
@@ -576,10 +577,10 @@ suitable.  Use `uv-lock' instead."
   (let ((default-directory (project-root (project-current))))
     (compile cmd t)))
 
-(defun uv--do-command-maybe-interactive (cmd interactive)
+(defun uv--do-command-maybe-terminal (cmd terminal)
   "Perform the command CMD either as compile or if INTERACTIVE is non nil in `ansi-term'."
   (let ((default-directory (project-root (project-current))))
-    (if interactive
+    (if terminal
         (ansi-term cmd)
     (compile cmd t))))
 
