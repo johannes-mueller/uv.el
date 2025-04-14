@@ -574,7 +574,11 @@ suitable.  Use `uv-lock' instead."
 
 (defun uv--do-command (cmd)
   "Perform the command CMD in a compint compile buffer in the project's root dir."
-  (let ((default-directory (project-root (project-current))))
+  (let ((project (project-current)))
+        (message "project-current: %s %s" (project-current) (if project (project-root project) default-directory)))
+  (let* ((project (project-current))
+         (default-directory (if project (project-root project) default-directory)))
+    (message "compiling")
     (compile cmd t)))
 
 (defun uv--do-command-maybe-terminal (cmd terminal)

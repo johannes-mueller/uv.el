@@ -9,6 +9,13 @@
     (uv-init-cmd "foo-bar")
     (should (equal project-current-directory-override "foo-bar"))))
 
+(ert-deftest uv-init-no-args-no-project-current ()
+  (mocker-let ((project-current () ((:output nil)))
+               (compile (cmd comint) ((:input '("uv init foo-bar" t))))
+               (call-interactively (fun) ((:input '(project-dired)))))
+    (uv-init-cmd "foo-bar")
+    (should (equal project-current-directory-override "foo-bar"))))
+
 (ert-deftest uv-init-transient-name-no-masks ()
   (mocker-let ((compile (cmd comint) ((:input '("uv init --name=FooBar foo-bar" t)))))
     (uv-init-cmd "foo-bar" '("--name=FooBar"))))
