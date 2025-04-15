@@ -39,13 +39,32 @@ At the moment the most convenient method to install it is using
 [straight.el](https://github.com/raxod502/straight.el). Put the following lines
 into your startup file.
 
-``` elisp
+```elisp
 (use-package uv
   :straight (uv :type git :host github :repo "johannes-mueller/uv.el"))
 ```
 
 Then you can try `M-x uv` for the top menu. There are also commands for each
 sub menu directly, they are `uv-init`, `uv-add`, etc.
+
+In order to use the full functionality, you will also need to install my
+tree-sitter based TOML parser
+[`tomlparse.el`](https://github.com/johannes-mueller/tomlparse.el) along with
+the TOML tree-sitter grammar binary.
+
+For that you can put the following snippet into your startup file.
+
+```elisp
+(use-package tomlparse
+  :straight (tomlparse :type git :host github :repo "johannes-mueller/tomlparse.el")
+  :init
+  (add-to-list 'treesit-language-source-alist '(toml "https://github.com/tree-sitter-grammars/tree-sitter-toml"))
+  (unless (treesit-language-available-p 'toml)
+    (treesit-install-language-grammar 'toml)))
+```
+
+That is needed to read the `pyproject.toml` file to get information about the
+python project in order to propose completions.
 
 
 ## Future plans
