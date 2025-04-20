@@ -111,17 +111,16 @@ suitable.  Use `uv-init' instead."
             (let ((completion-styles '(basic)))
               (completing-read prompt (uv--sorted-python-version-completions) initial t))))
 
-
 (defun uv--sorted-python-version-completions ()
+  "Determine and sort the available python versions."
   (let ((python-versions (uv--available-python-versions)))
     (lambda (string pred action)
       (if (eq action 'metadata)
           `(metadata (display-sort-function . ,#'identity))
         (complete-with-action action python-versions string pred)))))
 
-
 (defun uv--available-python-versions ()
-  "Determine and sort the available python versions."
+  "Determine the available python versions."
   (sort (delete-dups
          (mapcar (lambda (python) (gethash "version" python))
                  (json-parse-string
@@ -145,7 +144,7 @@ suitable.  Use `uv-init' instead."
                      (t (string> kind-1 kind-2))))))))
 
 (defun uv--parse-python-version (version)
-  "Parse a python VERSION string and return a list '(`major' `minor' `patch')"
+  "Parse a python VERSION string and return a list '(`major' `minor' `patch')."
   (save-match-data
     (when (string-match "\\([[:digit:]]+\\)\\.\\([[:digit:]]+\\)\\.\\([[:digit:]]+\\)" version)
       (list (string-to-number (match-string 1 version))
@@ -201,7 +200,6 @@ suitable.  Use `uv-venv' instead."
          (project-entry (gethash "project" pyproject-data)))
     (when-let ((ht (gethash "optional-dependencies" project-entry)))
       (hash-table-keys ht))))
-
 
 (defun uv--known-dependencies ()
   "Determine the projects known extras from pyproject.toml."
@@ -259,7 +257,6 @@ suitable.  Use `uv-add' instead."
   (let ((args (when args (concat (string-join args " ") " "))))
     (uv--do-command (concat "uv add " args  package))))
 
-
 (defun uv-remove-cmd (package &optional args)
   "Perform the `uv remove' command to remove PACKAGE with ARGS.
 
@@ -269,7 +266,6 @@ suitable.  Use `uv-remove' instead."
    (let ((package (completing-read "Remove package: " (uv--known-dependencies) nil t)))
      (append (list package) (when transient-current-command (list (transient-args transient-current-command))))))
     (uv--do-command (format "uv remove %s \"%s\"" (string-join args " ") package)))
-
 
 (defun uv-sync-cmd (&optional args)
   "Perform the `uv sync' command with ARGS.
@@ -281,14 +277,12 @@ suitable.  Use `uv-sync' instead."
      (list (transient-args transient-current-command))))
   (uv--do-command (concat "uv sync " (string-join args " "))))
 
-
 (defun uv--find-multiswitch-suffix (argument)
   "Find the `uv--transient-multiswitch' with the argument ARGUMENT."
   (cl-find-if (lambda (obj)
                 (and (eq (eieio-object-class obj) 'uv--transient-multiswitch)
                      (equal (oref obj argument) argument)))
               transient--suffixes))
-
 
 (defun uv--all-ticks-toggle (argument)
   "Select or deselect all options of the multiswitch ARGUMENT."
@@ -297,7 +291,6 @@ suitable.  Use `uv-sync' instead."
     (if (equal (oref suffix value) candidates)
         (oset suffix value nil)
       (oset suffix value candidates))))
-
 
 (transient-define-argument uv--extra-multiswitch ()
   "Selector for package extras."
@@ -309,12 +302,10 @@ suitable.  Use `uv-sync' instead."
   :prompt "extra: "
   :choices 'uv--known-extras)
 
-
 (transient-define-suffix uv--select-or-deselect-all-extras ()
   :transient 'transient--do-stay
   (interactive)
   (uv--all-ticks-toggle "--extra "))
-
 
 (transient-define-argument uv--group-multiswitch ()
   "Selector for dependency groups."
@@ -326,12 +317,10 @@ suitable.  Use `uv-sync' instead."
   :prompt "group: "
   :choices 'uv--known-dependency-groups)
 
-
 (transient-define-suffix uv--select-or-deselect-all-groups ()
   :transient 'transient--do-stay
   (interactive)
   (uv--all-ticks-toggle "--group "))
-
 
 (transient-define-suffix uv--toggle-dev-group ()
   :transient 'transient--do-stay
@@ -343,7 +332,6 @@ suitable.  Use `uv-sync' instead."
               (delete "dev" selection)
             (push "dev" selection))))
     (oset suffix value new-selection)))
-
 
 (defconst uv--dependency-options
   ["Dependency options"
@@ -426,7 +414,6 @@ suitable.  Use `uv-sync' instead."
     (uv--do-command-maybe-terminal (concat "uv run " args command) terminal)
     (uv--add-run-command-to-history command)))
 
-
  ;;;###autoload (autoload 'uv-run "uv" nil t)
 (transient-define-prefix uv-run ()
   "Run a command or script"
@@ -444,7 +431,6 @@ suitable.  Use `uv-sync' instead."
     ("T" "Interactive: run in an ansi-term window rather than compile/comint" "terminal")]]
   ["run"
    ("RET" "Run" uv-run-cmd)])
-
 
 (defun uv--project-tool-run-command-history ()
   "Retrieve the tool run command history of the current project."
@@ -472,7 +458,6 @@ suitable.  Use `uv-sync' instead."
     (uv--do-command-maybe-terminal (concat "uv tool run " args tool) terminal)
     (uv--add-tool-run-command-to-history tool)))
 
-
  ;;;###autoload (autoload 'uv-tool-run "uv" nil t)
 (transient-define-prefix uv-tool-run ()
   "Run a tool by `uv tool run'"
@@ -494,20 +479,17 @@ suitable.  Use `uv-sync' instead."
   ["tool run"
    ("RET" "tool run" uv-tool-run-cmd)])
 
-
 ;;;###autoload
 (defun uv-cache-clean ()
   "Clean the uv cache."
   (interactive)
   (uv--do-command "uv cache clean"))
 
-
 ;;;###autoload
 (defun uv-cache-prune ()
   "Prune the uv cache."
   (interactive)
   (uv--do-command "uv cache prune"))
-
 
 (defun uv--quote-string-transient-args (args)
   "Preprocess transient ARGS to append them to a uv command."
@@ -528,7 +510,6 @@ suitable.  Use `uv-sync' instead."
       (compilation-mode))
     (display-buffer buffer)))
 
-
  ;;;###autoload (autoload 'uv-lock "uv" nil t)
 (transient-define-prefix uv-lock ()
   "Update the project's lockfile"
@@ -546,7 +527,6 @@ suitable.  Use `uv-sync' instead."
                (completing-read prompt (uv--known-locked-packages) nil t)))]]
   ["lock" ("RET" "Lock dependencies" uv-lock-cmd)])
 
-
 (defun uv-lock-cmd (&optional args)
   "Perform the `uv lock' command with ARGS.
 
@@ -558,8 +538,8 @@ suitable.  Use `uv-lock' instead."
   (uv--do-command (concat "uv lock " (string-join args " "))))
 
 (defun uv--known-locked-packages ()
+  "Determine the project's locked dependency packages."
   (string-split (uv--shell-command-stdout-to-string "uv export --no-hashes --no-emit-project --no-header --all-extras")))
-
 
  ;;;###autoload (autoload 'uv "uv" nil t)
 (transient-define-prefix uv ()
@@ -576,11 +556,8 @@ suitable.  Use `uv-lock' instead."
 
 (defun uv--do-command (cmd)
   "Perform the command CMD in a compint compile buffer in the project's root dir."
-  (let ((project (project-current)))
-        (message "project-current: %s %s" (project-current) (if project (project-root project) default-directory)))
   (let* ((project (project-current))
          (default-directory (if project (project-root project) default-directory)))
-    (message "compiling")
     (compile cmd t)))
 
 (defun uv--do-command-maybe-terminal (cmd terminal)
@@ -639,8 +616,8 @@ OJB is just the self reference."
     (when choices
       (concat argument (string-join choices (concat " " argument))))))
 
-
 (defun uv--shell-command-stdout-to-string (command)
+  "Execute COMMAND and return its stdout output while discarding stderr."
   (with-output-to-string
     (with-current-buffer standard-output
       (let ((stderr (get-buffer-create " *temp*")))
