@@ -303,3 +303,18 @@ pandas==2.2.3
 python-dateutil==2.9.0.post0
 "))))
     (should (equal (uv--known-locked-packages) '("numpy==2.2.4" "pandas==2.2.3" "python-dateutil==2.9.0.post0")))))
+
+
+(ert-deftest uv--run-candidates-no-python-script ()
+  (mocker-let ((shell-command-to-string (cmd) ((:input '("uv run 2> /dev/null | sed -n 's/^- //p'")
+                                                :output "foo\nbar\n")))
+               (file-expand-wildcards (pattern) ((:input '("*.py") :output nil))))
+    (should (equal (uv--run-candidates) '("foo" "bar")))))
+
+
+(ert-deftest uv--run-candidates-with-python-script ()
+  (mocker-let ((shell-command-to-string (cmd) ((:input '("uv run 2> /dev/null | sed -n 's/^- //p'")
+                                                :output "foo\nbar\n")))
+               (file-expand-wildcards (pattern) ((:input '("*.py")
+                                                  :output '("hello.py" "goodbye.py")))))
+    (should (equal (uv--run-candidates) '("hello.py" "goodbye.py" "foo" "bar")))))

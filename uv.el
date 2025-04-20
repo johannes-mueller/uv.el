@@ -184,7 +184,7 @@ suitable.  Use `uv-venv' instead."
   ("RET" "Create the venv" uv-venv)])
 
 (defun uv--read-project-data ()
-  (let ((pyproject-file (concat (file-name-as-directory (project-root (project-current))) "pyproject.toml")))
+  (let ((pyproject-file (concat (file-name-as-directory (uv--project-root)) "pyproject.toml")))
     (unless (file-exists-p pyproject-file)
       (user-error "Current project does not seem to have a `pyproject.toml' file."))
     (tomlparse-file pyproject-file)))
@@ -396,7 +396,9 @@ suitable.  Use `uv-sync' instead."
 
 (defun uv--run-candidates ()
   "Determine candidate commands for `uv run'."
-  (string-split (shell-command-to-string "uv run | sed -n 's/^- //p'")))
+  (let ((default-directory (uv--project-root)))
+    (append (file-expand-wildcards "*.py")
+            (string-split (shell-command-to-string "uv run 2> /dev/null | sed -n 's/^- //p'")))))
 
 (defun uv--project-run-command-history ()
   "Retrieve the run command history of the current project."
@@ -583,7 +585,7 @@ suitable.  Use `uv-lock' instead."
 
 (defun uv--do-command-maybe-terminal (cmd terminal)
   "Perform the command CMD either as compile or if INTERACTIVE is non nil in `ansi-term'."
-  (let ((default-directory (project-root (project-current))))
+  (let ((default-directory (uv--project-root)))
     (if terminal
         (ansi-term cmd)
     (compile cmd t))))
@@ -645,6 +647,12 @@ OJB is just the self reference."
         (unwind-protect
             (shell-command command t stderr)
           (kill-buffer stderr))))))
+
+(defun uv--project-root ()
+  "Save determination of the project root with `default-directory' as default."
+  (if (project-current)
+      (project-root (project-current))
+    (default-directory)))
 
 (provide 'uv)
 
