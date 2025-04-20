@@ -71,6 +71,21 @@
   (mocker-let ((compile (cmd comint) ((:input '("uv add --dev pytest" t)))))
     (uv-add-cmd "pytest" '("--dev"))))
 
+(ert-deftest uv-add-extra-two-only-comma ()
+  (mocker-let ((compile (cmd comint) ((:input '("uv add --extra=excel --extra=hdf5 pandas" t)))))
+    (uv-add-cmd "pandas" '("--extra=excel,hdf5"))))
+
+(ert-deftest uv-add-extra-two-comma-ws ()
+  (mocker-let ((compile (cmd comint) ((:input '("uv add --extra=excel --extra=hdf5 pandas" t)))))
+    (uv-add-cmd "pandas" '("--extra=excel, hdf5"))))
+
+(ert-deftest uv-add-extra-two-only-ws ()
+  (mocker-let ((compile (cmd comint) ((:input '("uv add --extra=excel --extra=hdf5 pandas" t)))))
+    (uv-add-cmd "pandas" '("--extra=excel hdf5"))))
+
+(ert-deftest uv-add-extra-two-ws-comma ()
+  (mocker-let ((compile (cmd comint) ((:input '("uv add --extra=excel --extra=hdf5 pandas" t)))))
+    (uv-add-cmd "pandas" '("--extra=excel ,hdf5"))))
 
 (defun alist-to-hash-table (alist)
   (let ((hash-table (make-hash-table :test 'equal)))

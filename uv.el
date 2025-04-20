@@ -33,13 +33,11 @@
   ((scope :initarg :scope))
   "A `transient-argument' to select from a list of mutually non exclusive items.")
 
-
 (defvar uv--run-history (make-hash-table :test 'equal)
   "A hash-table to store the history of uv runs for each project.")
 
 (defvar uv--tool-run-history (make-hash-table :test 'equal)
   "A hash-table to store the history of uv tool runs for each project.")
-
 
 (defun uv-init-cmd (directory &optional args)
   "Perform the `uv init' command in DIRECTORY with ARGS.
@@ -215,7 +213,8 @@ suitable.  Use `uv-venv' instead."
 
 
 (defconst uv--dependency-group
-  ["Options"   ("d" "Into development dependency group" "--dev")
+  ["Options"
+   ("d" "Into development dependency group" "--dev")
    ("g" "Into a specified depencency group" "--group "
     :prompt "Choose group: "
     :class transient-option
@@ -226,9 +225,10 @@ suitable.  Use `uv-venv' instead."
     :class transient-option
     :reader (lambda (prompt initial history)
               (completing-read prompt (uv--known-extras) initial nil)))
-    ("a" "Sync into active virtual environment." "--active")
-    ("l" "Assert that `uv.lock' will remain unchanged." "--locked")
-    ("f" "Sync without updating `uv.lock'" "--frozen")]
+   ("e" "Specify extras (comma separated)" "--extra=")
+   ("a" "Sync into active virtual environment." "--active")
+   ("l" "Assert that `uv.lock' will remain unchanged." "--locked")
+   ("f" "Sync without updating `uv.lock'" "--frozen")]
   "Transient group to add and remove python dependencies.")
 
  ;;;###autoload (autoload 'uv-add "uv" nil t)
@@ -255,7 +255,7 @@ suitable.  Use `uv-add' instead."
   (interactive
    (let ((package (read-string "Package name: ")))
      (append (list package) (when transient-current-command (list (transient-args transient-current-command))))))
-  (let ((args (when args (concat (string-join args " ") " "))))
+  (let ((args (when args (concat (string-join (uv--spread-comma-separated-args args "--extra=") " ") " "))))
     (uv--do-command (concat "uv add " args  package))))
 
 (defun uv-remove-cmd (package &optional args)
@@ -277,6 +277,18 @@ suitable.  Use `uv-sync' instead."
    (when transient-current-command
      (list (transient-args transient-current-command))))
   (uv--do-command (concat "uv sync " (string-join args " "))))
+
+(defun uv--spread-comma-separated-args (args argument)
+  "Spread comma separated list after ARGUMENT in ARGS into separated arguments.
+
+Example:
+--extra=foo, bar => --extra=foo --extra=bar"
+  (mapcar (lambda (arg)
+            (if (string-prefix-p argument arg)
+                (let ((items (string-split (substring arg (length argument)) "[, \t]+")))
+                  (concat argument (string-join items (concat " " argument))))
+              arg))
+          args))
 
 (defun uv--find-multiswitch-suffix (argument)
   "Find the `uv--transient-multiswitch' with the argument ARGUMENT."
