@@ -80,6 +80,7 @@ suitable.  Use `uv-init' instead."
     ("l" "lib – create a lib rather than an app" "--lib")
     ("v" "do not initalize a git repository" "--vcs none")
     ("p" "setup to build a python package" "--package")
+    ("a" "automatically determine author info" "--author-from=auto" )
     (uv--select-build-backend)
     ("r" "No README.md" "--no-readme")
     ("V" "Do not create a `.python-version` file for the project." "--no-pin-python")
