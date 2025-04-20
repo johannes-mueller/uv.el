@@ -28,6 +28,7 @@
 (require 'tomlparse)
 (require 'project)
 (require 'subr-x)
+(require 'python)
 
 (defclass uv--transient-multiswitch (transient-argument)
   ((scope :initarg :scope))
@@ -38,6 +39,8 @@
 
 (defvar uv--tool-run-history (make-hash-table :test 'equal)
   "A hash-table to store the history of uv tool runs for each project.")
+
+(defvar uv--projects-last-venv nil)
 
 (defun uv-init-cmd (directory &optional args)
   "Perform the `uv init' command in DIRECTORY with ARGS.
@@ -212,7 +215,10 @@ suitable.  Use `uv-venv' instead."
      nil)))
 
 
-(defconst uv--dependency-group
+ ;;;###autoload (autoload 'uv-add "uv" nil t)
+(transient-define-prefix uv-add ()
+  "Add dependencies to the project"
+  :show-help (lambda (obj) (uv--show-help "add"))
   ["Options"
    ("d" "Into development dependency group" "--dev")
    ("g" "Into a specified depencency group" "--group "
@@ -220,7 +226,7 @@ suitable.  Use `uv-venv' instead."
     :class transient-option
     :reader (lambda (prompt initial history)
               (completing-read prompt (uv--known-dependency-groups) initial nil)))
-   ("o" "Add the dependency to a specified extra" "--optional "
+   ("o" "To a specified extra" "--optional "
     :prompt "Choose extra: "
     :class transient-option
     :reader (lambda (prompt initial history)
@@ -229,13 +235,6 @@ suitable.  Use `uv-venv' instead."
    ("a" "Sync into active virtual environment." "--active")
    ("l" "Assert that `uv.lock' will remain unchanged." "--locked")
    ("f" "Sync without updating `uv.lock'" "--frozen")]
-  "Transient group to add and remove python dependencies.")
-
- ;;;###autoload (autoload 'uv-add "uv" nil t)
-(transient-define-prefix uv-add ()
-  "Add dependencies to the project"
-  :show-help (lambda (obj) (uv--show-help "add"))
-  uv--dependency-group
   ["add"
    ("RET" "Add dependency" uv-add-cmd)])
 
@@ -243,7 +242,21 @@ suitable.  Use `uv-venv' instead."
 (transient-define-prefix uv-remove ()
   "Remove dependencies from the project"
   :show-help (lambda (obj) (uv--show-help "remove"))
-  uv--dependency-group
+  ["Options"
+   ("d" "From development dependency group" "--dev")
+   ("g" "From a specified depencency group" "--group "
+    :prompt "Choose group: "
+    :class transient-option
+    :reader (lambda (prompt initial history)
+              (completing-read prompt (uv--known-dependency-groups) initial nil)))
+   ("o" "From a specified extra" "--optional "
+    :prompt "Choose extra: "
+    :class transient-option
+    :reader (lambda (prompt initial history)
+              (completing-read prompt (uv--known-extras) initial nil)))
+   ("a" "Sync into active virtual environment." "--active")
+   ("l" "Assert that `uv.lock' will remain unchanged." "--locked")
+   ("f" "Sync without updating `uv.lock'" "--frozen")]
   ["remove"
    ("RET" "Remove dependency" uv-remove-cmd)])
 
@@ -276,7 +289,8 @@ suitable.  Use `uv-sync' instead."
   (interactive
    (when transient-current-command
      (list (transient-args transient-current-command))))
-  (uv--do-command (concat "uv sync " (string-join args " "))))
+  (uv--do-command (concat "uv sync " (string-join args " ")))
+  (uv-activate-venv))
 
 (defun uv--spread-comma-separated-args (args argument)
   "Spread comma separated list after ARGUMENT in ARGS into separated arguments.
@@ -592,6 +606,29 @@ suitable.  Use `uv-lock' instead."
     ((pred (transient-arg-value "--dev"))
      '(group . "dev"))))
 
+(defun uv-activate-venv ()
+  (and-let* ((venvdir (concat (uv--project-root) ".venv"))
+             (_ (file-directory-p venvdir))
+             (old-venv-info `(:path ,(getenv "PATH")
+                              :venv ,(getenv "VIRTUAL_ENV")
+                              :python-home ,(getenv "PYTHONHOME")))
+             (_ (not (equal old-venv-info uv--projects-last-venv))))
+    (setenv "VIRTUAL_ENV" venvdir)
+    (setenv "PYTHONHOME" nil)
+    (setenv "PATH" (format "%s/bin:%s" venvdir (plist-get old-venv-info :path)))
+    (setq python-shell-virtualenv-root venvdir)
+    (setq uv--projects-last-venv old-venv-info)
+    venvdir))
+
+(defun uv-deactivate-venv ()
+  (when uv--projects-last-venv
+    (setq python-shell-virtualenv-root (plist-get uv--projects-last-venv :venv))
+    (setenv "VIRTUAL_ENV" python-shell-virtualenv-root)
+    (setenv "PYTHONHOME" (plist-get uv--projects-last-venv :python-home))
+    (setenv "PATH" (plist-get uv--projects-last-venv :path))
+    (setq uv--projects-last-venv nil)
+    python-shell-virtualenv-root))
+
 (cl-defmethod transient-infix-read ((obj uv--transient-multiswitch))
   "Implement function `transient-infix-read' for OBJ."
   (let* ((prompt (oref obj prompt))
@@ -641,7 +678,7 @@ OJB is just the self reference."
 (defun uv--project-root ()
   "Save determination of the project root with `default-directory' as default."
   (if (project-current)
-      (project-root (project-current))
+      (file-name-as-directory (project-root (project-current)))
     (default-directory)))
 
 (provide 'uv)
