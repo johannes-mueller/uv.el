@@ -48,19 +48,18 @@
       (uv-init-cmd "foo-bar" '("--no-readme")))))
 
 (ert-deftest uv-available-python-versions-sorted ()
-  (mocker-let ((shell-command-to-string (cmd) ((:input '("uv python list --output-format=json")
-                                                :output "[{\"version\": \"3.7.9\"}, {\"version\": \"3.13.2\"}, {\"version\": \"3.13.1\"}]"))))
+  (mocker-let ((process-lines (cmd &rest args) ((:input '("uv" "python" "list" "--output-format=json")
+                                           :output '("[{\"version\": \"3.7.9\"}, {\"version\": \"3.13.2\"}, {\"version\": \"3.13.1\"}]")))))
     (should (equal (uv--available-python-versions) '("3.13.2" "3.13.1" "3.7.9")))))
 
 (ert-deftest uv-available-python-versions-sorted-non-unique ()
-  (mocker-let ((shell-command-to-string (cmd) ((:input '("uv python list --output-format=json")
-                                                :output "[{\"version\": \"3.13.2\"}, {\"version\": \"3.13.2\"}, {\"version\": \"3.13.1\"}]"))))
+  (mocker-let ((process-lines (cmd &rest args) ((:input '("uv" "python" "list" "--output-format=json")
+                                           :output '("[{\"version\": \"3.13.2\"}, {\"version\": \"3.13.2\"}, {\"version\": \"3.13.1\"}]")))))
     (should (equal (uv--available-python-versions) '("3.13.2" "3.13.1")))))
 
-
 (ert-deftest uv-available-python-versions-unsorted ()
-  (mocker-let ((shell-command-to-string (cmd) ((:input '("uv python list --output-format=json")
-                                                :output "[{\"version\": \"3.13.2\"}, {\"version\": \"3.13.1\"}, {\"version\": \"3.14.0b3\"}, {\"version\": \"3.14.0rc1\"}, {\"version\": \"3.12.9\"}, {\"version\": \"3.14.0a4\"}, {\"version\": \"3.14.0a5\"}, {\"version\": \"3.7.9\"}]"))))
+  (mocker-let ((process-lines (cmd &rest args) ((:input '("uv" "python" "list" "--output-format=json")
+                                           :output '("[{\"version\": \"3.13.2\"}, {\"version\": \"3.13.1\"}, {\"version\": \"3.14.0b3\"}, {\"version\": \"3.14.0rc1\"}, {\"version\": \"3.12.9\"}, {\"version\": \"3.14.0a4\"}, {\"version\": \"3.14.0a5\"}, {\"version\": \"3.7.9\"}]")))))
     (should (equal (uv--available-python-versions) '("3.13.2" "3.13.1" "3.12.9" "3.7.9" "3.14.0rc1" "3.14.0b3" "3.14.0a4" "3.14.0a5")))))
 
 ;; (ert-deftest uv-available-python-versions-minor-releases ()
@@ -318,14 +317,13 @@
 
 
 (ert-deftest known-locked-packages-empty ()
-  (mocker-let ((uv--shell-command-stdout-to-string (cmd) ((:input '("uv export --no-hashes --no-emit-project --no-header --all-extras")
-                                                :output ""))))
+  (mocker-let ((uv--command-stdout-to-string (cmd &rest args) ((:input '("uv" "export" "--no-hashes" "--no-emit-project" "--no-header" "--no-annotate" "--all-extras")
+                                                     :output ""))))
     (should (eq (uv--known-locked-packages) nil))))
 
 
 (ert-deftest known-locked-packages-non-empty ()
-  (mocker-let ((uv--shell-command-stdout-to-string (cmd)
-                                                   ((:input '("uv export --no-hashes --no-emit-project --no-header --all-extras")
+  (mocker-let ((uv--command-stdout-to-string (cmd &rest args) ((:input '("uv" "export" "--no-hashes" "--no-emit-project" "--no-header" "--no-annotate" "--all-extras")
                                                      :output "numpy==2.2.4
 pandas==2.2.3
 python-dateutil==2.9.0.post0

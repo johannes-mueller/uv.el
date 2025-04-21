@@ -128,7 +128,7 @@ suitable.  Use `uv-init' instead."
   (sort (delete-dups
          (mapcar (lambda (python) (gethash "version" python))
                  (json-parse-string
-                  (shell-command-to-string "uv python list --output-format=json"))))
+                  (car (process-lines "uv" "python" "list" "--output-format=json")))))
         #'uv--python-version>))
 
 (defun uv--python-version> (version-1 version-2)
@@ -538,7 +538,7 @@ suitable.  Use `uv-sync' instead."
   (let ((buffer (get-buffer-create (format "*uv help %s*" command))))
     (with-current-buffer buffer
       (erase-buffer)
-      (insert (shell-command-to-string (concat "uv help " command)))
+      (insert (call-process "uv" nil buffer nil "help" command))
       (compilation-mode))
     (display-buffer buffer)))
 
@@ -571,7 +571,7 @@ suitable.  Use `uv-lock' instead."
 
 (defun uv--known-locked-packages ()
   "Determine the project's locked dependency packages."
-  (string-split (uv--shell-command-stdout-to-string "uv export --no-hashes --no-emit-project --no-header --all-extras")))
+  (string-split (uv--command-stdout-to-string "uv" "export" "--no-hashes" "--no-emit-project" "--no-header" "--no-annotate" "--all-extras")))
 
  ;;;###autoload (autoload 'uv "uv" nil t)
 (transient-define-prefix uv ()
@@ -677,20 +677,17 @@ OJB is just the self reference."
     (when choices
       (concat argument (string-join choices (concat " " argument))))))
 
-(defun uv--shell-command-stdout-to-string (command)
-  "Execute COMMAND and return its stdout output while discarding stderr."
-  (with-output-to-string
-    (with-current-buffer standard-output
-      (let ((stderr (get-buffer-create " *temp*")))
-        (unwind-protect
-            (shell-command command t stderr)
-          (kill-buffer stderr))))))
-
 (defun uv--project-root ()
   "Save determination of the project root with `default-directory' as default."
   (if (project-current)
       (file-name-as-directory (project-root (project-current)))
     default-directory))
+
+(defun uv--command-stdout-to-string (command &rest args)
+  "Execute COMMAND with ARGS and return its stdout while discarding stderr."
+  (with-temp-buffer
+    (apply #'call-process command nil `(,(current-buffer) nil) nil args)
+    (buffer-string)))
 
 (provide 'uv)
 
