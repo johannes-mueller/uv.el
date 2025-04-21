@@ -79,7 +79,7 @@ suitable.  Use `uv-init' instead."
     ("n" "Name" "--name=" :prompt "Project name: ")
     ("d" "Description" "--description=" :prompt "Project description: ")
     ("l" "lib – create a lib rather than an app" "--lib")
-    ("v" "do not initalize a git repository" "--vcs none")
+    ("v" "do not initialize a git repository" "--vcs none")
     ("p" "setup to build a python package" "--package")
     ("a" "automatically determine author info" "--author-from=auto" )
     (uv--select-build-backend)
@@ -387,7 +387,7 @@ Example:
     :class transient-option
     :reader (lambda (prompt initial history)
               (read-string prompt initial history)))
-   ("s" "Resplution strategy" "--resolution "
+   ("s" "Resolution strategy" "--resolution "
     :class transient-switches
     :argument-format "--resolution %s"
     :argument-regexp "--resolution \\(.*\\)"
@@ -399,7 +399,7 @@ Example:
   :show-help (lambda (obj) (uv--show-help "sync"))
   [uv--dependency-options
    ["Sync options"
-    ("ne" "Install editable dependencys non-editable." "--non-editable")
+    ("ne" "Install editable dependencies non-editable." "--non-editable")
     ("i" "Do not remove extraneous packages." "--inexact")
     ("a" "Sync into active virtual environment." "--active")
     ("l" "Assert that `uv.lock' will remain unchanged." "--locked")
@@ -428,7 +428,10 @@ Example:
   "Perform the `uv run' command to run COMMAND with ARGS.
 
 Only to be used directly when the default arguments of `uv sync' are
-suitable.  Use `uv-sync' instead."
+suitable.  Use `uv-sync' instead.
+
+If TERMINAL is non nil, run in an `ansi-term' rather than in a comint
+buffer."
   (interactive
    (let* ((history (uv--project-run-command-history))
           (prompt (format "Command%s: " (if history (format " (%s)" (car history)) "")))
@@ -500,7 +503,7 @@ suitable.  Use `uv-sync' instead."
      :class transient-option
      :reader (lambda (prompt initial history)
                (read-string prompt initial history)))
-    ("T" "Interactive: run in an ansi-term window rather than compile/comint" "terminal")]
+    ("T" "Terminal: run in an ansi-term window rather than compile/comint" "terminal")]
    uv--cache-options
    uv--resolver-options]
   ["tool run"
@@ -588,7 +591,7 @@ suitable.  Use `uv-lock' instead."
     (compile cmd t)))
 
 (defun uv--do-command-maybe-terminal (cmd terminal)
-  "Perform the command CMD either as compile or if INTERACTIVE is non nil in `ansi-term'."
+  "Perform the command CMD either as compile or if TERMINAL is non nil in `ansi-term'."
   (let ((default-directory (uv--project-root)))
     (if terminal
         (ansi-term cmd)
