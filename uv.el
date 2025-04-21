@@ -443,7 +443,7 @@ buffer."
      (when terminal (setq args (seq-remove-at-position args terminal)))
      (append (list command) `(,(and terminal t)) (list args))))
   (let ((args (when args (concat (string-join args " ") " "))))
-    (uv--do-command-maybe-terminal (concat "uv run " args command) terminal)
+    (uv--do-command-maybe-terminal (concat "uv run " args "-- " command) terminal)
     (uv--add-run-command-to-history command)))
 
  ;;;###autoload (autoload 'uv-run "uv" nil t)

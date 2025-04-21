@@ -267,15 +267,15 @@
 
 
 (ert-deftest uv-run-command-compile ()
-  (mocker-let ((compile (cmd comint) ((:input '("uv run foo-command" t)))))
+  (mocker-let ((compile (cmd comint) ((:input '("uv run -- foo-command" t)))))
     (uv-run-cmd "foo-command")))
 
 (ert-deftest uv-run-command-ansi-term ()
-  (mocker-let ((ansi-term (cmd) ((:input '("uv run foo-command")))))
+  (mocker-let ((ansi-term (cmd) ((:input '("uv run -- foo-command")))))
     (uv-run-cmd "foo-command" 'interactive)))
 
 (ert-deftest uv-run-command-history ()
-  (mocker-let ((compile (cmd comint) ((:input '("uv run foo-command" t))))
+  (mocker-let ((compile (cmd comint) ((:input '("uv run -- foo-command" t))))
                (project-current () ((:input '() :output (cons 'project "/foo/bar/project"))))
                (project-root (project) ((:input '((project . "/foo/bar/project"))
                                          :output "/foo/bar/project"))))
