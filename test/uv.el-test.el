@@ -359,7 +359,7 @@ python-dateutil==2.9.0.post0
     (should (uv-activate-venv))
     (should (equal python-shell-virtualenv-root "/foo/bar/project/.venv"))))
 
-(ert-deftest uv--activate-venv-venv-exand-path ()
+(ert-deftest uv--activate-venv-venv-expand-path ()
   (let ((native-comp-enable-subr-trampolines nil))
     (mocker-let ((project-current () ((:input '() :output (cons 'project "~/project"))))
                  (project-root (project) ((:input '((project . "~/project"))
@@ -368,12 +368,12 @@ python-dateutil==2.9.0.post0
                                             :output "/home/me/project/.venv")))
                  (file-directory-p (venvdir) ((:input '("/home/me/project/.venv")
                                                :output t)))
-                 (getenv (var) ((:input '("PATH") :output "/original/path:/usr/bin")
+                 (getenv (var) ((:input '("PATH") :output "/some/path:/usr/bin")
                                 (:input '("VIRTUAL_ENV") :output nil)
                                 (:input '("PYTHONHOME") :output nil)))
                  (setenv (var value) ((:input '("VIRTUAL_ENV" "/home/me/project/.venv"))
                                       (:input '("PYTHONHOME" nil))
-                                      (:input '("PATH" "/home/me/project/.venv/bin:/original/path:/usr/bin")))))
+                                      (:input '("PATH" "/home/me/project/.venv/bin:/some/path:/usr/bin")))))
       (should (uv-activate-venv))
       (should (equal python-shell-virtualenv-root "/home/me/project/.venv")))))
 
