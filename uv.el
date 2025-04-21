@@ -57,7 +57,7 @@ suitable.  Use `uv-init' instead."
   (interactive
    (let ((directory (file-name-as-directory
                      (expand-file-name
-                      (read-directory-name "Create project in: "))))
+                      (read-directory-name "Create project in: " default-directory))))
          (no-venv (cl-find "no-venv" (transient-args transient-current-command) :test 'equal))
          (args (cl-remove "no-venv" (transient-args transient-current-command) :test 'equal)))
      (append (list directory) (list args) (list no-venv))))
@@ -67,15 +67,6 @@ suitable.  Use `uv-init' instead."
                                                 (process-lines "uv" "venv")))
                               (dired directory))))
     (uv--do-command (concat "uv init " (string-join args " ")))))
-
-(defun uv-init-here-cmd (&optional args)
-  "Perform the `uv init' command in the current directory with ARGS.
-
-Only to be used directly when the default arguments of `uv init' are
-suitable.  Use `uv-init' instead."
-  (interactive
-   (list (transient-args transient-current-command))
-  (uv-init default-directory args)))
 
 (defconst uv--python-group
   ["Python options"
@@ -100,8 +91,7 @@ suitable.  Use `uv-init' instead."
     ("-nv" "Do not create a venv" "no-venv")]
    uv--python-group]
   ["Init"
-   ("M-RET" "Ask for target directory" uv-init-cmd)
-   ("RET" "Initialize in current directory" uv-init-here-cmd)])
+   ("RET" "Ask for target directory" uv-init-cmd)])
 
 (defconst uv--build-backends '("hatch" "flit" "pdm" "setuptools" "maturin" "scikit")
   "The available python build-backends.")
