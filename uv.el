@@ -460,7 +460,7 @@ buffer."
     ("l" "Assert that `uv.lock' will remain unchanged." "--locked")
     ("f" "Sync without updating `uv.lock'" "--frozen")
     ("ns" "Do not sync the virtual environement" "--no-sync")
-    ("T" "Interactive: run in an ansi-term window rather than compile/comint" "terminal")]]
+    ("T" "Interactive: run in an ansi-term" "terminal")]]
   ["run"
    ("RET" "Run" uv-run-cmd)])
 
