@@ -607,7 +607,7 @@ suitable.  Use `uv-lock' instead."
      '(group . "dev"))))
 
 (defun uv-activate-venv ()
-  (and-let* ((venvdir (concat (uv--project-root) ".venv"))
+  (and-let* ((venvdir (expand-file-name (concat (uv--project-root) ".venv")))
              (_ (file-directory-p venvdir))
              (old-venv-info `(:path ,(getenv "PATH")
                               :venv ,(getenv "VIRTUAL_ENV")
