@@ -2,35 +2,50 @@
 (require 'uv)
 (require 'cl-lib)
 
+(defmacro expect-compile (command &rest body)
+  (declare (indent 1))
+  `(with-temp-buffer
+     (mocker-let ((compile (cmd comint) ((:input (list ,command t) :output (current-buffer)))))
+       (setq compilation-finish-functions "uuu")
+       ,@body
+       (when compilation-finish-functions (funcall (car compilation-finish-functions) ,(current-buffer) "msg")))))
 
-(ert-deftest uv-init-no-args ()
-  (mocker-let ((compile (cmd comint) ((:input '("uv init foo-bar" t))))
-               (call-interactively (fun) ((:input '(project-dired)))))
-    (uv-init-cmd "foo-bar")
-    (should (equal project-current-directory-override "foo-bar"))))
+(ert-deftest uv-init-no-args-current-project ()
+  (mocker-let ((process-lines (cmd args) ((:input '("uv" "venv"))))
+               (dired (dir) ((:input '("foo-bar")))))
+    (expect-compile "uv init foo-bar"
+      (uv-init-cmd "foo-bar"))))
 
 (ert-deftest uv-init-no-args-no-project-current ()
-  (mocker-let ((project-current () ((:output nil)))
-               (compile (cmd comint) ((:input '("uv init foo-bar" t))))
-               (call-interactively (fun) ((:input '(project-dired)))))
-    (uv-init-cmd "foo-bar")
-    (should (equal project-current-directory-override "foo-bar"))))
+  (mocker-let ((process-lines (cmd args) ((:input '("uv" "venv"))))
+               (project-current () ((:output nil)))
+               (dired (dir) ((:input '("foo-bar")))))
+    (expect-compile "uv init foo-bar"
+      (uv-init-cmd "foo-bar"))))
 
 (ert-deftest uv-init-transient-name-no-masks ()
-  (mocker-let ((compile (cmd comint) ((:input '("uv init --name=FooBar foo-bar" t)))))
-    (uv-init-cmd "foo-bar" '("--name=FooBar"))))
+  (mocker-let ((process-lines (cmd args) ((:input '("uv" "venv"))))
+               (dired (dir) ((:input '("foo-bar")))))
+    (expect-compile "uv init --name=FooBar foo-bar"
+      (uv-init-cmd "foo-bar" '("--name=FooBar")))))
 
 (ert-deftest uv-init-transient-name-with-masks ()
-  (mocker-let ((compile (cmd comint) ((:input '("uv init --name=My\\ Project foo-bar" t)))))
-    (uv-init-cmd "foo-bar" '("--name=My Project"))))
+  (mocker-let ((process-lines (cmd args) ((:input '("uv" "venv"))))
+               (dired (dir) ((:input '("foo-bar")))))
+    (expect-compile "uv init --name=My\\ Project foo-bar"
+      (uv-init-cmd "foo-bar" '("--name=My Project")))))
 
 (ert-deftest uv-init-transient-python-version ()
-  (mocker-let ((compile (cmd comint) ((:input '("uv init --python 3.12 foo-bar" t)))))
-    (uv-init-cmd "foo-bar" '("--python 3.12"))))
+  (mocker-let ((process-lines (cmd args) ((:input '("uv" "venv"))))
+               (dired (dir) ((:input '("foo-bar")))))
+    (expect-compile "uv init --python 3.12 foo-bar"
+      (uv-init-cmd "foo-bar" '("--python 3.12")))))
 
 (ert-deftest uv-init-transient-no-readme ()
-  (mocker-let ((compile (cmd comint) ((:input '("uv init --no-readme foo-bar" t)))))
-    (uv-init-cmd "foo-bar" '("--no-readme"))))
+  (mocker-let ((process-lines (cmd args) ((:input '("uv" "venv"))))
+               (dired (dir) ((:input '("foo-bar")))))
+    (expect-compile "uv init --no-readme foo-bar"
+      (uv-init-cmd "foo-bar" '("--no-readme")))))
 
 (ert-deftest uv-available-python-versions-sorted ()
   (mocker-let ((shell-command-to-string (cmd) ((:input '("uv python list --output-format=json")
@@ -52,39 +67,37 @@
 ;;   (mocker-let ((shell-command-to-string (cmd) ((:input '("uv python list --output-format=json" t);                                                        :output "[{\"version\": \"3.13.1\"}, {\"version\": \"3.13.2\"}, {\"version\": \"3.12.1\"}, {\"version\": \"3.12.2\"}]"))))
 ;;     (should (equal (uv--available-python-versions) '("3.13" "3.13.1" "3.13.2" "3.12" "3.12.1" "3.12.2")))))
 
-
 (ert-deftest uv-venv-plain ()
-  (mocker-let ((compile (cmd comint) ((:input '("uv venv" t)))))
+  (expect-compile "uv venv"
     (uv-venv-cmd)))
 
 (ert-deftest uv-venv-seed ()
-  (mocker-let ((compile (cmd comint) ((:input '("uv venv --seed" t)))))
+  (expect-compile "uv venv --seed"
     (uv-venv-cmd '("--seed"))))
 
-
 (ert-deftest uv-add-one ()
-  (mocker-let ((compile (cmd comint) ((:input '("uv add pandas" t)))))
+  (expect-compile "uv add pandas"
     (uv-add-cmd "pandas")))
 
 
 (ert-deftest uv-add-dev ()
-  (mocker-let ((compile (cmd comint) ((:input '("uv add --dev pytest" t)))))
+  (expect-compile "uv add --dev pytest"
     (uv-add-cmd "pytest" '("--dev"))))
 
 (ert-deftest uv-add-extra-two-only-comma ()
-  (mocker-let ((compile (cmd comint) ((:input '("uv add --extra=excel --extra=hdf5 pandas" t)))))
+  (expect-compile "uv add --extra=excel --extra=hdf5 pandas"
     (uv-add-cmd "pandas" '("--extra=excel,hdf5"))))
 
 (ert-deftest uv-add-extra-two-comma-ws ()
-  (mocker-let ((compile (cmd comint) ((:input '("uv add --extra=excel --extra=hdf5 pandas" t)))))
+  (expect-compile "uv add --extra=excel --extra=hdf5 pandas"
     (uv-add-cmd "pandas" '("--extra=excel, hdf5"))))
 
 (ert-deftest uv-add-extra-two-only-ws ()
-  (mocker-let ((compile (cmd comint) ((:input '("uv add --extra=excel --extra=hdf5 pandas" t)))))
+  (expect-compile "uv add --extra=excel --extra=hdf5 pandas"
     (uv-add-cmd "pandas" '("--extra=excel hdf5"))))
 
 (ert-deftest uv-add-extra-two-ws-comma ()
-  (mocker-let ((compile (cmd comint) ((:input '("uv add --extra=excel --extra=hdf5 pandas" t)))))
+  (expect-compile "uv add --extra=excel --extra=hdf5 pandas"
     (uv-add-cmd "pandas" '("--extra=excel ,hdf5"))))
 
 (defun alist-to-hash-table (alist)

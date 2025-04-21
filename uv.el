@@ -42,7 +42,14 @@
 
 (defvar uv--projects-last-venv nil)
 
-(defun uv-init-cmd (directory &optional args)
+(defvar uv--after-run-hook nil
+  "An internal hook for uv command functions.
+
+This is only for uv command functions to execute something after the uv
+command has been finished.  Please don't set it manually outside uv
+command functions.")
+
+(defun uv-init-cmd (directory &optional args no-venv)
   "Perform the `uv init' command in DIRECTORY with ARGS.
 
 Only to be used directly when the default arguments of `uv init' are
@@ -50,12 +57,16 @@ suitable.  Use `uv-init' instead."
   (interactive
    (let ((directory (file-name-as-directory
                      (expand-file-name
-                      (read-directory-name "Create project in: ")))))
-     (append (list directory) (list (transient-args transient-current-command)))))
-  (let ((args (append (uv--quote-string-transient-args args) (list directory))))
-    (uv--do-command (concat "uv init " (string-join args " ")))
-    (setq-local project-current-directory-override directory)
-    (call-interactively 'project-dired)))
+                      (read-directory-name "Create project in: "))))
+         (no-venv (cl-find "no-venv" (transient-args transient-current-command) :test 'equal))
+         (args (cl-remove "no-venv" (transient-args transient-current-command) :test 'equal)))
+     (append (list directory) (list args) (list no-venv))))
+  (let ((args (append (uv--quote-string-transient-args args) (list directory)))
+        (uv--after-run-hook (lambda ()
+                              (unless no-venv (let ((default-directory directory))
+                                                (process-lines "uv" "venv")))
+                              (dired directory))))
+    (uv--do-command (concat "uv init " (string-join args " ")))))
 
 (defun uv-init-here-cmd (&optional args)
   "Perform the `uv init' command in the current directory with ARGS.
@@ -85,7 +96,8 @@ suitable.  Use `uv-init' instead."
     (uv--select-build-backend)
     ("r" "No README.md" "--no-readme")
     ("V" "Do not create a `.python-version` file for the project." "--no-pin-python")
-    ("w" "Avoid discovering a workspace and create a standalone project." "--no-workspace")]
+    ("w" "Avoid discovering a workspace and create a standalone project." "--no-workspace")
+    ("-nv" "Do not create a venv" "no-venv")]
    uv--python-group]
   ["Init"
    ("M-RET" "Ask for target directory" uv-init-cmd)
@@ -588,7 +600,13 @@ suitable.  Use `uv-lock' instead."
   "Perform the command CMD in a compint compile buffer in the project's root dir."
   (let* ((project (project-current))
          (default-directory (if project (project-root project) default-directory)))
-    (compile cmd t)))
+    (let ((buf (compile cmd t))
+          (hook uv--after-run-hook))
+      (with-current-buffer buf
+        (add-hook 'compilation-finish-functions
+                  (lambda (_buf _msg)
+                    (when hook(funcall hook)))
+                  nil 'local)))))
 
 (defun uv--do-command-maybe-terminal (cmd terminal)
   "Perform the command CMD either as compile or if TERMINAL is non nil in `ansi-term'."
@@ -682,7 +700,7 @@ OJB is just the self reference."
   "Save determination of the project root with `default-directory' as default."
   (if (project-current)
       (file-name-as-directory (project-root (project-current)))
-    (default-directory)))
+    default-directory))
 
 (provide 'uv)
 
