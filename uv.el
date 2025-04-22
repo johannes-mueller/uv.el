@@ -469,6 +469,7 @@ suitable.  Use `uv-run' instead."
 (transient-define-prefix uv-run ()
   "Run a command or script"
   :show-help (lambda (obj) (uv--show-help "run"))
+  :value #'uv--project-last-run-args
   [uv--dependency-options
    ["Run options"
     ("m" "Run as a module" "--module")
@@ -528,6 +529,7 @@ suitable.  Use `uv-sync' instead."
 (transient-define-prefix uv-tool-run ()
   "Run a tool by `uv tool run'"
   :show-help (lambda (obj (uv--show-help "tool run")))
+  :value #'uv--project-last-tool-run-args
   [["Options"
     ("f" "Use a the given package to provide the command" "--from "
      :prompt "From package: "
