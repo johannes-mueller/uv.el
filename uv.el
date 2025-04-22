@@ -56,6 +56,8 @@ This is only for uv command functions to execute something after the uv
 command has been finished.  Please don't set it manually outside uv
 command functions.")
 
+(defvar uv--run-fail-hook nil)
+
 (defun uv-init-cmd (directory &optional args no-venv)
   "Perform the `uv init' command in DIRECTORY with ARGS.
 
@@ -300,6 +302,14 @@ suitable.  Use `uv-sync' instead."
      (list (transient-args transient-current-command))))
   (uv--do-command (concat "uv sync " (string-join args " ")))
   (uv-activate-venv))
+
+;;;###autoload
+(defun uv-sync-background ()
+  "Run `uv sync' silently in background."
+  (interactive)
+  (let ((uv--run-fail-hook (lambda (buf _msg) (display-buffer buf))))
+    (cl-flet ((display-buffer #'ignore))
+      (save-window-excursion (uv--do-command "uv sync")))))
 
 (defun uv--spread-comma-separated-args (args argument)
   "Spread comma separated list after ARGUMENT in ARGS into separated arguments.
@@ -627,11 +637,14 @@ suitable.  Use `uv-lock' instead."
   (let* ((project (project-current))
          (default-directory (if project (project-root project) default-directory)))
     (let ((buf (compile cmd t))
-          (hook uv--after-run-hook))
+          (hook uv--after-run-hook)
+          (fail-hook uv--run-fail-hook))
       (with-current-buffer buf
         (add-hook 'compilation-finish-functions
-                  (lambda (_buf _msg)
-                    (when hook(funcall hook)))
+                  (lambda (buf msg)
+                    (when hook (funcall hook))
+                    (when (and fail-hook (string-match-p "exited abnormally" msg))
+                      (funcall fail-hook buf msg)))
                   nil 'local)))))
 
 (defun uv--do-command-maybe-terminal (cmd terminal)
