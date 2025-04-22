@@ -37,8 +37,12 @@
 (defvar uv--run-history (make-hash-table :test 'equal)
   "A hash-table to store the history of uv runs for each project.")
 
+(defvar uv--last-run-args (make-hash-table :test 'equal))
+
 (defvar uv--tool-run-history (make-hash-table :test 'equal)
   "A hash-table to store the history of uv tool runs for each project.")
+
+(defvar uv--last-tool-run-args (make-hash-table :test 'equal))
 
 (defvar uv--projects-last-venv nil)
 
@@ -423,28 +427,41 @@ Example:
 
 (defun uv--add-run-command-to-history (cmd)
   "Add the command CMD to the run command history of the current project."
-  (let ((history (gethash (project-current) uv--run-history)))
+  (let ((history (remove cmd (gethash (project-current) uv--run-history))))
     (puthash (project-current) (push cmd history) uv--run-history)))
 
-(defun uv-run-cmd (command &optional terminal args)
+(defun uv--project-last-run-args ()
+  "Retrieve the argument list of the current project's last `uv run' command."
+  (gethash (project-current) uv--last-run-args))
+
+(defun uv--put-project-last-run-args (args)
+  "Remember ARGS as the argument list of the current project's last `uv run' command."
+  (puthash (project-current) args uv--last-run-args))
+
+(defun uv-run-cmd (command &optional args)
   "Perform the `uv run' command to run COMMAND with ARGS.
 
-Only to be used directly when the default arguments of `uv sync' are
-suitable.  Use `uv-sync' instead.
-
-If TERMINAL is non nil, run in an `ansi-term' rather than in a comint
-buffer."
+Only to be used directly when the default arguments of `uv run' are
+suitable.  Use `uv-run' instead."
   (interactive
    (let* ((history (uv--project-run-command-history))
           (prompt (format "Command%s: " (if history (format " (%s)" (car history)) "")))
           (command (completing-read prompt (uv--run-candidates) nil nil nil '(history . 0) (car history)))
-          (args (or (and transient-current-command (transient-args transient-current-command)) '()))
-          (terminal (seq-position args "terminal")))
-     (when terminal (setq args (seq-remove-at-position args terminal)))
-     (append (list command) `(,(and terminal t)) (list args))))
-  (let ((args (when args (concat (string-join args " ") " "))))
-    (uv--do-command-maybe-terminal (concat "uv run " args "-- " command) terminal)
+          (args (or (and transient-current-command (transient-args transient-current-command)) '())))
+     (append (list command) (list args))))
+  (let ((terminal (seq-position args "terminal"))
+        (switches (string-join (remove "terminal" args) " ")))
+    (uv--do-command-maybe-terminal (format "uv run %s -- %s" switches command) terminal)
+    (uv--put-project-last-run-args args)
     (uv--add-run-command-to-history command)))
+
+;;;###autoload
+(defun uv-repeat-run ()
+  "Repeat the last `uv run' command with its arguments."
+  (interactive)
+  (if-let ((last-cmd (car (gethash (project-current) uv--run-history))))
+      (uv-run-cmd last-cmd (uv--project-last-run-args))
+    (message "Nothing to repeat")))
 
  ;;;###autoload (autoload 'uv-run "uv" nil t)
 (transient-define-prefix uv-run ()
@@ -470,25 +487,41 @@ buffer."
 
 (defun uv--add-tool-run-command-to-history (cmd)
   "Add the command CMD to the tool run command history of the current project."
-  (let ((history (gethash (project-current) uv--tool-run-history)))
+  (let ((history (remove cmd (gethash (project-current) uv--tool-run-history))))
     (puthash (project-current) (push cmd history) uv--tool-run-history)))
 
-(defun uv-tool-run-cmd (tool &optional terminal args)
+(defun uv--project-last-tool-run-args ()
+  "Retrieve the argument list of the current project's last `uv tool run' command."
+  (gethash (project-current) uv--last-tool-run-args))
+
+(defun uv--put-project-last-tool-run-args (args)
+  "Remember ARGS as the argument list of the current project's last `uv tool run' command."
+  (puthash (project-current) args uv--last-tool-run-args))
+
+(defun uv-tool-run-cmd (tool &optional args)
   "Perform the `uv tool' command to run COMMAND with ARGS.
 
 Only to be used directly when the default arguments of `uv sync' are
 suitable.  Use `uv-sync' instead."
-(interactive
- (let* ((history (uv--project-tool-run-command-history))
-        (prompt (format "Run tool%s: " (if history (format " (%s)" (car history)) "")))
-        (tool (read-string "Run tool: "))
-        (args (or (and transient-current-command (transient-args transient-current-command)) '()))
-        (terminal (seq-position args "terminal")))
-     (when terminal (setq args (seq-remove-at-position args terminal)))
-     (append (list tool) `(,(and terminal t)) (list args))))
-  (let ((args (when args (concat (string-join args " ") " "))))
-    (uv--do-command-maybe-terminal (concat "uv tool run " args tool) terminal)
-    (uv--add-tool-run-command-to-history tool)))
+  (interactive
+   (let* ((history (uv--project-tool-run-command-history))
+          (prompt (format "Run tool%s: " (if history (format " (%s)" (car history)) "")))
+          (tool (read-string "Run tool: "))
+          (args (or (and transient-current-command (transient-args transient-current-command)) '())))
+     (append (list tool) (list args))))
+   (let ((terminal (seq-position args "terminal"))
+         (switches (string-join (remove "terminal" args) " ")))
+     (uv--do-command-maybe-terminal (format "uv tool run %s %s" switches tool) terminal)
+     (uv--put-project-last-tool-run-args args)
+     (uv--add-tool-run-command-to-history tool)))
+
+;;;###autoload
+(defun uv-repeat-tool-run ()
+  "Repeat the last `uv tool run' command with its arguments."
+  (interactive)
+  (if-let ((last-cmd (car (gethash (project-current) uv--tool-run-history))))
+      (uv-tool-run-cmd last-cmd (uv--project-last-tool-run-args))
+    (message "Nothing to repeat")))
 
  ;;;###autoload (autoload 'uv-tool-run "uv" nil t)
 (transient-define-prefix uv-tool-run ()
