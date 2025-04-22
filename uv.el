@@ -230,7 +230,7 @@ suitable.  Use `uv-venv' instead."
   :show-help (lambda (obj) (uv--show-help "add"))
   ["Options"
    ("d" "Into development dependency group" "--dev")
-   ("g" "Into a specified depencency group" "--group "
+   ("g" "Into a specified dependency group" "--group "
     :prompt "Choose group: "
     :class transient-option
     :reader (lambda (prompt initial history)
@@ -501,7 +501,7 @@ suitable.  Use `uv-run' instead."
   (puthash (project-current) args uv--last-tool-run-args))
 
 (defun uv-tool-run-cmd (tool &optional args)
-  "Perform the `uv tool' command to run COMMAND with ARGS.
+  "Perform the `uv tool' TOOL to run COMMAND with ARGS.
 
 Only to be used directly when the default arguments of `uv sync' are
 suitable.  Use `uv-sync' instead."
