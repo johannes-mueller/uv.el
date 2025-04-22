@@ -37,6 +37,9 @@
 (defvar uv--run-history (make-hash-table :test 'equal)
   "A hash-table to store the history of uv runs for each project.")
 
+(defvar uv--history nil
+  "An internal variable that serves as a symbol for minibuffer history.")
+
 (defvar uv--last-run-args (make-hash-table :test 'equal))
 
 (defvar uv--tool-run-history (make-hash-table :test 'equal)
@@ -444,9 +447,8 @@ Example:
 Only to be used directly when the default arguments of `uv run' are
 suitable.  Use `uv-run' instead."
   (interactive
-   (let* ((history (uv--project-run-command-history))
-          (prompt (format "Command%s: " (if history (format " (%s)" (car history)) "")))
-          (command (completing-read prompt (uv--run-candidates) nil nil nil '(history . 0) (car history)))
+   (let* ((uv--history (uv--project-run-command-history))
+          (command (completing-read "Command: " (uv--run-candidates) nil nil nil '(uv--history . 0)))
           (args (or (and transient-current-command (transient-args transient-current-command)) '())))
      (append (list command) (list args))))
   (let ((terminal (seq-position args "terminal"))
@@ -504,9 +506,8 @@ suitable.  Use `uv-run' instead."
 Only to be used directly when the default arguments of `uv sync' are
 suitable.  Use `uv-sync' instead."
   (interactive
-   (let* ((history (uv--project-tool-run-command-history))
-          (prompt (format "Run tool%s: " (if history (format " (%s)" (car history)) "")))
-          (tool (read-string "Run tool: "))
+   (let* ((uv--history (uv--project-tool-run-command-history))
+          (tool (read-string "Run tool: " (car uv--history) '(uv--history . 1)))
           (args (or (and transient-current-command (transient-args transient-current-command)) '())))
      (append (list tool) (list args))))
    (let ((terminal (seq-position args "terminal"))
