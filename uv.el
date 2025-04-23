@@ -432,7 +432,9 @@ Example:
   "Determine candidate commands for `uv run'."
   (let ((default-directory (uv--project-root)))
     (append (file-expand-wildcards "*.py")
-            (string-split (shell-command-to-string "uv run 2> /dev/null | sed -n 's/^- //p'")))))
+            (string-split
+             (shell-command-to-string
+              (uv--devcontainer-advise-command "uv run 2> /dev/null | sed -n 's/^- //p'"))))))
 
 (defun uv--project-run-command-history ()
   "Retrieve the run command history of the current project."
@@ -617,7 +619,7 @@ suitable.  Use `uv-lock' instead."
 
 (defun uv--known-locked-packages ()
   "Determine the project's locked dependency packages."
-  (string-split (uv--command-stdout-to-string "uv" "export" "--no-hashes" "--no-emit-project" "--no-header" "--no-annotate" "--all-extras")))
+  (string-split (uv--command-stdout-to-string "uv export --no-hashes --no-emit-project --no-header --no-annotate --all-extras")))
 
  ;;;###autoload (autoload 'uv "uv" nil t)
 (transient-define-prefix uv ()
@@ -733,11 +735,16 @@ OJB is just the self reference."
       (file-name-as-directory (project-root (project-current)))
     default-directory))
 
-(defun uv--command-stdout-to-string (command &rest args)
-  "Execute COMMAND with ARGS and return its stdout while discarding stderr."
-  (with-temp-buffer
-    (apply #'call-process command nil `(,(current-buffer) nil) nil args)
-    (buffer-string)))
+(defun uv--command-stdout-to-string (command-line)
+  "Execute COMMAND-LINE and return its stdout while discarding stderr."
+  (let ((cmd-list (string-split command-line)))
+    (with-temp-buffer
+     (apply #'call-process (car cmd-list) nil `(,(current-buffer) nil) nil (cdr cmd-list))
+     (buffer-string))))
+
+(defun uv--devcontainer-advise-command (command)
+  "Prepend devcontainer forwarder to COMMAND if needed."
+  (funcall (or (symbol-function 'devcontainer-advise-command) #'identity) command))
 
 (provide 'uv)
 

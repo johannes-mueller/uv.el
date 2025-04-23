@@ -404,18 +404,24 @@
 
 
 (ert-deftest known-locked-packages-empty ()
-  (mocker-let ((uv--command-stdout-to-string (cmd &rest args) ((:input '("uv" "export" "--no-hashes" "--no-emit-project" "--no-header" "--no-annotate" "--all-extras")
-                                                     :output ""))))
-    (should (eq (uv--known-locked-packages) nil))))
+  (let ((native-comp-enable-subr-trampolines nil))
+    (mocker-let ((current-buffer () ((:output "*some buffer*")))
+                 (call-process (cmd &rest _)
+                               ((:input '("uv" nil ("*some buffer*" nil) nil "export" "--no-hashes" "--no-emit-project" "--no-header" "--no-annotate" "--all-extras"))))
+                 (buffer-string () ((:output ""))))
+      (should (eq (uv--known-locked-packages) nil)))))
 
 
 (ert-deftest known-locked-packages-non-empty ()
-  (mocker-let ((uv--command-stdout-to-string (cmd &rest args) ((:input '("uv" "export" "--no-hashes" "--no-emit-project" "--no-header" "--no-annotate" "--all-extras")
-                                                     :output "numpy==2.2.4
+  (let ((native-comp-enable-subr-trampolines nil))
+    (mocker-let ((current-buffer () ((:output "*some buffer*")))
+                 (call-process (cmd &rest _)
+                               ((:input '("uv" nil ("*some buffer*" nil) nil "export" "--no-hashes" "--no-emit-project" "--no-header" "--no-annotate" "--all-extras"))))
+                 (buffer-string () ((:output "numpy==2.2.4
 pandas==2.2.3
 python-dateutil==2.9.0.post0
 "))))
-    (should (equal (uv--known-locked-packages) '("numpy==2.2.4" "pandas==2.2.3" "python-dateutil==2.9.0.post0")))))
+    (should (equal (uv--known-locked-packages) '("numpy==2.2.4" "pandas==2.2.3" "python-dateutil==2.9.0.post0"))))))
 
 
 (ert-deftest uv--run-candidates-no-python-script ()
@@ -432,6 +438,13 @@ python-dateutil==2.9.0.post0
                                                   :output '("hello.py" "goodbye.py")))))
     (should (equal (uv--run-candidates) '("hello.py" "goodbye.py" "foo" "bar")))))
 
+(ert-deftest uv--run-candidates-devcontainer ()
+  (mocker-let ((devcontainer-advise-command (cmd) ((:input '("uv run 2> /dev/null | sed -n 's/^- //p'")
+                                                    :output "devcontainer exec --workspace-folder . uv run 2> /dev/null | sed -n 's/^- //p'")))
+               (shell-command-to-string (cmd) ((:input '("devcontainer exec --workspace-folder . uv run 2> /dev/null | sed -n 's/^- //p'")
+                                                :output "foo\nbar\n")))
+               (file-expand-wildcards (pattern) ((:input '("*.py") :output nil))))
+    (should (equal (uv--run-candidates) '("foo" "bar")))))
 
 (ert-deftest uv--activate-venv-no-venv-available ()
   (mocker-let ((project-current () ((:input '() :output (cons 'project "/foo/bar/project"))))
