@@ -457,6 +457,21 @@ python-dateutil==2.9.0.post0
     (should (uv-activate-venv))
     (should (equal python-shell-virtualenv-root "/foo/bar/project/.venv"))))
 
+(ert-deftest uv--activate-venv-unify-path ()
+  (mocker-let ((project-current () ((:input '() :output (cons 'project "/foo/bar/project"))))
+               (project-root (project) ((:input '((project . "/foo/bar/project"))
+                                         :output "/foo/bar/project")))
+               (file-directory-p (venvdir) ((:input '("/foo/bar/project/.venv")
+                                             :output t)))
+               (getenv (var) ((:input '("PATH") :output "/original/path:/foo/bar/project/.venv/bin:/usr/bin")
+                              (:input '("VIRTUAL_ENV") :output nil)
+                              (:input '("PYTHONHOME") :output nil)))
+               (setenv (var value) ((:input '("VIRTUAL_ENV" "/foo/bar/project/.venv"))
+                                    (:input '("PYTHONHOME" nil))
+                                    (:input '("PATH" "/foo/bar/project/.venv/bin:/original/path:/usr/bin")))))
+    (should (uv-activate-venv))))
+
+
 (ert-deftest uv--activate-venv-venv-expand-path ()
   (let ((native-comp-enable-subr-trampolines nil))
     (mocker-let ((project-current () ((:input '() :output (cons 'project "~/project"))))
