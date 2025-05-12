@@ -196,28 +196,29 @@ suitable.  Use `uv-venv' instead."
   ("RET" "Create the venv" uv-venv)])
 
 (defun uv--read-project-data ()
-  (let ((pyproject-file (concat (file-name-as-directory (uv--project-root)) "pyproject.toml")))
-    (unless (file-exists-p pyproject-file)
-      (user-error "Current project does not seem to have a `pyproject.toml' file."))
-    (tomlparse-file pyproject-file)))
+  "Read the `pyproject.toml' file of the project's root if it exists."
+  (when-let* ((root (uv--project-root))
+              (pyproject-file (concat (file-name-as-directory root) "pyproject.toml")))
+    (when (file-exists-p pyproject-file)
+      (tomlparse-file pyproject-file))))
 
 (defun uv--known-dependency-groups ()
   "Determine the projects known dependency-groups from pyproject.toml."
-  (let ((pyproject-data (uv--read-project-data)))
-    (when-let ((ht (gethash "dependency-groups" pyproject-data)))
-      (hash-table-keys ht))))
+  (when-let* ((pyproject-data (uv--read-project-data))
+              (ht (gethash "dependency-groups" pyproject-data)))
+    (hash-table-keys ht)))
 
 (defun uv--known-extras ()
   "Determine the projects known extras from pyproject.toml."
-  (let* ((pyproject-data (uv--read-project-data))
-         (project-entry (gethash "project" pyproject-data)))
-    (when-let ((ht (gethash "optional-dependencies" project-entry)))
-      (hash-table-keys ht))))
+  (when-let* ((pyproject-data (uv--read-project-data))
+              (project-entry (gethash "project" pyproject-data))
+              (ht (gethash "optional-dependencies" project-entry)))
+      (hash-table-keys ht)))
 
 (defun uv--known-dependencies ()
   "Determine the projects known extras from pyproject.toml."
-  (let* ((pyproject-data (uv--read-project-data))
-         (project-entry (gethash "project" pyproject-data)))
+  (when-let* ((pyproject-data (uv--read-project-data))
+              (project-entry (gethash "project" pyproject-data)))
     (append
      (pcase (uv--group-arg (transient-args transient-current-command))
        (`(group . ,group) (gethash group (gethash "dependency-groups" pyproject-data)))
@@ -473,7 +474,7 @@ suitable.  Use `uv-run' instead."
 (defun uv-repeat-run ()
   "Repeat the last `uv run' command with its arguments."
   (interactive)
-  (if-let ((last-cmd (car (gethash (project-current) uv--run-history))))
+  (if-let* ((last-cmd (car (gethash (project-current) uv--run-history))))
       (uv-run-cmd last-cmd (uv--project-last-run-args))
     (message "Nothing to repeat")))
 
@@ -533,7 +534,7 @@ suitable.  Use `uv-sync' instead."
 (defun uv-repeat-tool-run ()
   "Repeat the last `uv tool run' command with its arguments."
   (interactive)
-  (if-let ((last-cmd (car (gethash (project-current) uv--tool-run-history))))
+  (if-let* ((last-cmd (car (gethash (project-current) uv--tool-run-history))))
       (uv-tool-run-cmd last-cmd (uv--project-last-tool-run-args))
     (message "Nothing to repeat")))
 
