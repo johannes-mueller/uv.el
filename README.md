@@ -45,26 +45,25 @@ into your startup file.
 ```
 
 Then you can try `M-x uv` for the top menu. There are also commands for each
-sub menu directly, they are `uv-init`, `uv-add`, etc.
+sub menu directly, they are `uv-init`, `uv-add`, etc.  That is needed to read
+the `pyproject.toml` file to get information about the python project in order
+to propose completions.
 
-In order to use the full functionality, you will also need to install my
-tree-sitter based TOML parser
-[`tomlparse.el`](https://github.com/johannes-mueller/tomlparse.el) along with
-the TOML tree-sitter grammar binary.
-
-For that you can put the following snippet into your startup file.
+You will also need the Tree sitter grammar for TOML files in order for the
+package to read your `pyproject.toml` file. In order to install that along with
+the package use the following snippet.
 
 ```elisp
-(use-package tomlparse
-  :straight (tomlparse :type git :host github :repo "johannes-mueller/tomlparse.el")
+(require 'treesit)
+
+(use-package uv
+  :straight (uv :type git :host github :repo "johannes-mueller/uv.el")
   :init
   (add-to-list 'treesit-language-source-alist '(toml "https://github.com/tree-sitter-grammars/tree-sitter-toml"))
   (unless (treesit-language-available-p 'toml)
     (treesit-install-language-grammar 'toml)))
 ```
 
-That is needed to read the `pyproject.toml` file to get information about the
-python project in order to propose completions.
 
 
 ## Future plans

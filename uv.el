@@ -5,7 +5,7 @@
 ;; Version: 0.1.0
 ;; License: GPLv3
 ;; SPDX-License-Identifier: GPL-3.0-only
-;; Package-Requires: ((emacs "29.1") (tomlparse "0.0.1"))
+;; Package-Requires: ((emacs "29.1") (tomlparse "1.0.0"))
 
 ;;; Commentary:
 
