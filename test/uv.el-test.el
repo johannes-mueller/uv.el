@@ -111,99 +111,101 @@
 (defun equal-set (list-1 list-2)
   (eq (cl-set-difference list-1 list-2 :test 'equal) nil))
 
+
+
 (ert-deftest known-groups-groups ()
   (let ((native-comp-enable-subr-trampolines nil))
   (mocker-let ((project-current () ((:output (cons 'project "/foo/bar/project"))))
-                (project-root (project) ((:input '((project . "/foo/bar/project"))
-                                          :output "/foo/bar/project")))
-                (file-exists-p (file) ((:input '("/foo/bar/project/pyproject.toml") :output t)))
-                (tomlparse-file (file) ((:input '("/foo/bar/project/pyproject.toml")
-                                         :output (alist-to-hash-table
-                                                  '(("project" ("version" . "0.1.0"))
-                                                    ("dependency-groups" ("my-extra" . ["scipy"]) ("dev" . ["pytest>=8.3.5"]))))))))
-     (should (equal-set (uv--known-dependency-groups) '("my-extra" "dev"))))))
+               (project-root (project) ((:input '((project . "/foo/bar/project"))
+                                         :output "/foo/bar/project")))
+               (file-exists-p (file) ((:input '("/foo/bar/project/pyproject.toml") :output t)))
+               (tomlparse-file (file) ((:input '("/foo/bar/project/pyproject.toml")
+                                        :output (alist-to-hash-table
+                                                 '(("project" ("version" . "0.1.0"))
+                                                   ("dependency-groups" ("my-extra" . ["scipy"]) ("dev" . ["pytest>=8.3.5"]))))))))
+    (should (equal-set (uv--known-dependency-groups) '("my-extra" "dev"))))))
 
 
 (ert-deftest known-groups-no-groups ()
   (let ((native-comp-enable-subr-trampolines nil))
     (mocker-let ((project-current () ((:output (cons 'project "/foo/bar/project"))))
-                (project-root (project) ((:input '((project . "/foo/bar/project"))
-                                          :output "/foo/bar/project")))
-                (file-exists-p (file) ((:input '("/foo/bar/project/pyproject.toml") :output t)))
-                (tomlparse-file (file) ((:input '("/foo/bar/project/pyproject.toml")
-                                         :output (alist-to-hash-table '(("project" ("version" . "0.1.0"))))))))
-     (should (eq (uv--known-dependency-groups) nil)))))
+                 (project-root (project) ((:input '((project . "/foo/bar/project"))
+                                           :output "/foo/bar/project")))
+                 (file-exists-p (file) ((:input '("/foo/bar/project/pyproject.toml") :output t)))
+                 (tomlparse-file (file) ((:input '("/foo/bar/project/pyproject.toml")
+                                          :output (alist-to-hash-table '(("project" ("version" . "0.1.0"))))))))
+      (should (eq (uv--known-dependency-groups) nil)))))
 
 
 (ert-deftest known-extras-extras ()
   (let ((native-comp-enable-subr-trampolines nil))
     (mocker-let ((project-current () ((:output (cons 'project "/foo/bar/project"))))
-                (project-root (project) ((:input '((project . "/foo/bar/project"))
-                                          :output "/foo/bar/project")))
-                (file-exists-p (file) ((:input '("/foo/bar/project/pyproject.toml") :output t)))
-                (tomlparse-file (file) ((:input '("/foo/bar/project/pyproject.toml")
-                                         :output (alist-to-hash-table
-                                                  '(("project"
-                                                     ("version" . "0.1.0")
-                                                     ("optional-dependencies"
-                                                      ("my-extra" . ["scipy"])
-                                                      ("dev" . ["pytest>=8.3.5"])))))))))
-     (should (equal-set (uv--known-extras) '("my-extra" "dev"))))))
+                 (project-root (project) ((:input '((project . "/foo/bar/project"))
+                                           :output "/foo/bar/project")))
+                 (file-exists-p (file) ((:input '("/foo/bar/project/pyproject.toml") :output t)))
+                 (tomlparse-file (file) ((:input '("/foo/bar/project/pyproject.toml")
+                                          :output (alist-to-hash-table
+                                                   '(("project"
+                                                      ("version" . "0.1.0")
+                                                      ("optional-dependencies"
+                                                       ("my-extra" . ["scipy"])
+                                                       ("dev" . ["pytest>=8.3.5"])))))))))
+      (should (equal-set (uv--known-extras) '("my-extra" "dev"))))))
 
 
 (ert-deftest known-extras-no-extras ()
   (let ((native-comp-enable-subr-trampolines nil))
     (mocker-let ((project-current () ((:output (cons 'project "/foo/bar/project"))))
-                (project-root (project) ((:input '((project . "/foo/bar/project"))
-                                          :output "/foo/bar/project")))
-                (file-exists-p (file) ((:input '("/foo/bar/project/pyproject.toml") :output t)))
-                (tomlparse-file (file) ((:input '("/foo/bar/project/pyproject.toml")
-                                         :output (alist-to-hash-table
-                                                  '(("project" ("version" . "0.1.0"))))))))
-     (should (equal (uv--known-extras) nil)))))
+                 (project-root (project) ((:input '((project . "/foo/bar/project"))
+                                           :output "/foo/bar/project")))
+                 (file-exists-p (file) ((:input '("/foo/bar/project/pyproject.toml") :output t)))
+                 (tomlparse-file (file) ((:input '("/foo/bar/project/pyproject.toml")
+                                          :output (alist-to-hash-table
+                                                   '(("project" ("version" . "0.1.0"))))))))
+      (should (equal (uv--known-extras) nil)))))
 
 
 (ert-deftest known-dependencies-dependencies-plain ()
   (let ((native-comp-enable-subr-trampolines nil))
     (mocker-let ((project-current () ((:output (cons 'project "/foo/bar/project"))))
-                (project-root (project) ((:input '((project . "/foo/bar/project"))
-                                          :output "/foo/bar/project")))
-                (file-exists-p (file) ((:input '("/foo/bar/project/pyproject.toml") :output t)))
-                (tomlparse-file (file) ((:input '("/foo/bar/project/pyproject.toml")
-                                         :output (alist-to-hash-table
-                                                  '(("project"
-                                                     ("version" . "0.1.0")
-                                                     ("dependencies" . ["scipy" "pytest>=8.3.5"]))))))))
-     (should (equal (uv--known-dependencies) '("scipy" "pytest>=8.3.5"))))))
+                 (project-root (project) ((:input '((project . "/foo/bar/project"))
+                                           :output "/foo/bar/project")))
+                 (file-exists-p (file) ((:input '("/foo/bar/project/pyproject.toml") :output t)))
+                 (tomlparse-file (file) ((:input '("/foo/bar/project/pyproject.toml")
+                                          :output (alist-to-hash-table
+                                                   '(("project"
+                                                      ("version" . "0.1.0")
+                                                      ("dependencies" . ["scipy" "pytest>=8.3.5"]))))))))
+      (should (equal (uv--known-dependencies) '("scipy" "pytest>=8.3.5"))))))
 
 
 (ert-deftest known-dependencies-no-dependencies ()
   (let ((native-comp-enable-subr-trampolines nil))
     (mocker-let ((project-current () ((:output (cons 'project "/foo/bar/project"))))
-                (project-root (project) ((:input '((project . "/foo/bar/project"))
-                                          :output "/foo/bar/project")))
-                (file-exists-p (file) ((:input '("/foo/bar/project/pyproject.toml") :output t)))
-                (tomlparse-file (file) ((:input '("/foo/bar/project/pyproject.toml")
-                                         :output (alist-to-hash-table
-                                                  '(("project" ("version" . "0.1.0"))))))))
-     (should (equal (uv--known-dependencies) nil)))))
+                 (project-root (project) ((:input '((project . "/foo/bar/project"))
+                                           :output "/foo/bar/project")))
+                 (file-exists-p (file) ((:input '("/foo/bar/project/pyproject.toml") :output t)))
+                 (tomlparse-file (file) ((:input '("/foo/bar/project/pyproject.toml")
+                                          :output (alist-to-hash-table
+                                                   '(("project" ("version" . "0.1.0"))))))))
+      (should (equal (uv--known-dependencies) nil)))))
 
 
 (ert-deftest known-dependencies-dependencies-without-group ()
   (let ((native-comp-enable-subr-trampolines nil))
     (mocker-let ((project-current () ((:output (cons 'project "/foo/bar/project"))))
-                (project-root (project) ((:input '((project . "/foo/bar/project"))
-                                          :output "/foo/bar/project")))
-                (file-exists-p (file) ((:input '("/foo/bar/project/pyproject.toml") :output t)))
-                (tomlparse-file (file) ((:input '("/foo/bar/project/pyproject.toml")
-                                         :output (alist-to-hash-table
-                                                  '(("project"
-                                                     ("version" . "0.1.0")
-                                                     ("dependencies" . ["numpy" "scipy"]))
-                                                    ("dependency-groups"
-                                                     ("dev" . ["pytest" "freezegun"])
-                                                     ("docs" . ["sphinx" "nbsphinx"]))))))))
-     (should (equal (uv--known-dependencies) '("numpy" "scipy"))))))
+                 (project-root (project) ((:input '((project . "/foo/bar/project"))
+                                           :output "/foo/bar/project")))
+                 (file-exists-p (file) ((:input '("/foo/bar/project/pyproject.toml") :output t)))
+                 (tomlparse-file (file) ((:input '("/foo/bar/project/pyproject.toml")
+                                          :output (alist-to-hash-table
+                                                   '(("project"
+                                                      ("version" . "0.1.0")
+                                                      ("dependencies" . ["numpy" "scipy"]))
+                                                     ("dependency-groups"
+                                                      ("dev" . ["pytest" "freezegun"])
+                                                      ("docs" . ["sphinx" "nbsphinx"]))))))))
+      (should (equal (uv--known-dependencies) '("numpy" "scipy"))))))
 
 
 (ert-deftest known-dependencies-dependencies-docs-group ()
