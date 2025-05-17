@@ -65,7 +65,6 @@ the package use the following snippet.
 ```
 
 
-
 ## Future plans
 
 This package does not – and probably never will – provide a complete interfact
@@ -77,3 +76,17 @@ sure how to get the user interface right for certain features.
 
 If you miss a certain feature, feel free to come up with a proposal in the
 [issue tracker](https://github.com/johannes-mueller/uv.el/issues).
+
+
+## Contributing
+
+My main issue is, that I am not that aware of possible workflows using uv which
+might be useful and which could be supported by this package.  I know my
+interpretation of how the `uv` program is meant to be used, but as it does not
+exist for all too long, there might be other interesting workflows possible,
+which this package can support or enable.
+
+You can discuss your workflows or wishes on the [discussion
+board](https://github.com/johannes-mueller/uv.el/discussions) of the
+package. More concrete feature requests and bug reports can go to the [issue
+tracker](https://github.com/johannes-mueller/uv.el/issues).

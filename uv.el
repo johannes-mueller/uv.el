@@ -62,7 +62,9 @@ command functions.")
   "Perform the `uv init' command in DIRECTORY with ARGS.
 
 Only to be used directly when the default arguments of `uv init' are
-suitable.  Use `uv-init' instead."
+suitable.  Use `uv-init' instead.
+
+A venv is created unless NO-VENV is non-nil."
   (interactive
    (let ((directory (file-name-as-directory
                      (expand-file-name
@@ -120,7 +122,7 @@ suitable.  Use `uv-init' instead."
   :argument "--python "
   :description "Python version"
   :class transient-option
-  :reader (lambda (prompt initial history)
+  :reader (lambda (prompt initial _history)
             (let ((completion-styles '(basic)))
               (completing-read prompt (uv--sorted-python-version-completions) initial t))))
 
@@ -259,12 +261,12 @@ suitable.  Use `uv-venv' instead."
    ("g" "From a specified depencency group" "--group "
     :prompt "Choose group: "
     :class transient-option
-    :reader (lambda (prompt initial history)
+    :reader (lambda (prompt initial _history)
               (completing-read prompt (uv--known-dependency-groups) initial nil)))
    ("o" "From a specified extra" "--optional "
     :prompt "Choose extra: "
     :class transient-option
-    :reader (lambda (prompt initial history)
+    :reader (lambda (prompt initial _history)
               (completing-read prompt (uv--known-extras) initial nil)))
    ("a" "Sync into active virtual environment." "--active")
    ("l" "Assert that `uv.lock' will remain unchanged." "--locked")
@@ -670,6 +672,7 @@ suitable.  Use `uv-lock' instead."
      '(group . "dev"))))
 
 (defun uv-activate-venv ()
+  "Detect and activate the venv for the current project."
   (and-let* ((venvdir (expand-file-name (concat (uv--project-root) ".venv")))
              (_ (file-directory-p venvdir))
              (old-venv-info `(:path ,(getenv "PATH")
