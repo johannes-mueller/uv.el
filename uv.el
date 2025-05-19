@@ -676,6 +676,7 @@ suitable.  Use `uv-lock' instead."
 
 (defun uv-activate-venv ()
   "Detect and activate the venv for the current project."
+  (interactive)
   (and-let* ((venvdir (expand-file-name (concat (uv--project-root) ".venv")))
              (_ (file-directory-p venvdir))
              (old-venv-info `(:path ,(getenv "PATH")
