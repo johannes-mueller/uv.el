@@ -195,7 +195,7 @@ suitable.  Use `uv-venv' instead."
    (uv--select-python-version)
    ("s" "Seed environment" "--seed")]
   ["venv"
-  ("RET" "Create the venv" uv-venv)])
+  ("RET" "Create the venv" uv-venv-cmd)])
 
 (defun uv--read-project-data ()
   "Read the `pyproject.toml' file of the project's root if it exists."
