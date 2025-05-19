@@ -79,11 +79,6 @@ A venv is created unless NO-VENV is non-nil."
                               (dired directory))))
     (uv--do-command (concat "uv init " (string-join args " ")))))
 
-(defconst uv--python-group
-  ["Python options"
-   (uv--select-python-version)]
-  "Transient group for general python options.")
-
  ;;;###autoload (autoload 'uv-init "uv" nil t)
 (transient-define-prefix uv-init ()
   "Initialize python project using `uv init'"
@@ -100,7 +95,8 @@ A venv is created unless NO-VENV is non-nil."
     ("V" "Do not create a `.python-version` file for the project." "--no-pin-python")
     ("w" "Avoid discovering a workspace and create a standalone project." "--no-workspace")
     ("-nv" "Do not create a venv" "no-venv")]
-   uv--python-group]
+   ["Python options"
+    (uv--select-python-version)]]
   ["Init"
    ("RET" "Ask for target directory" uv-init-cmd)])
 
