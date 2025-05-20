@@ -696,7 +696,7 @@ suitable.  Use `uv-lock' instead."
   (setq python-shell-virtualenv-root nil)
   (setenv "VIRTUAL_ENV" nil)
   (setenv "PYTHONHOME" (plist-get uv--projects-last-venv :python-home))
-  (setenv "PATH" (plist-get uv--projects-last-venv :path))
+  (when-let* ((path (plist-get uv--projects-last-venv :path))) (setenv "PATH" path))
   (setq uv--projects-last-venv nil))
 
 (cl-defmethod transient-infix-read ((obj uv--transient-multiswitch))
