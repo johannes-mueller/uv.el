@@ -33,9 +33,9 @@
 (defclass uv--transient-multiswitch (transient-argument)
   ((scope :initarg :scope))
   "A `transient-argument' to select from a list of mutually non exclusive items.")
+
 (defconst uv-commands (mapcar #'symbol-name
-  '(
-    run
+  '(run
     init
     add
     remove
@@ -54,14 +54,9 @@
     self
     generate-shell-completion)))
 
-(defun uv--read-command-from-minibuffer ()
-  (completing-read "UV command? "
-                   uv-commands
-                   nil
-                   t))
 (defun uv-show-command-help (command &rest subcommands)
-  "Show the help text for uv COMMAND."
-  (interactive (list (uv--read-command-from-minibuffer)))
+  "Show the help text for uv COMMAND and maybe SUBCOMMANDS."
+  (interactive (list (completing-read "UV command: " uv-commands nil t)))
   (let ((buf-name "*UV Help*"))
     (with-help-window buf-name
       (apply #'call-process "uv" nil buf-name nil "help" command subcommands))))
@@ -112,15 +107,16 @@ A venv is created unless NO-VENV is non-nil."
      (append (list directory) (list args) (list no-venv))))
   (let ((args (append (uv--quote-string-transient-args args) (list directory)))
         (uv--after-run-hook (lambda ()
-                              (unless no-venv (let ((default-directory directory))
-                                                (process-lines "uv" "venv")))
+                              (unless no-venv
+                                (let ((default-directory directory))
+                                  (ignore (process-lines "uv" "venv"))))
                               (dired directory))))
     (uv--do-command (concat "uv init " (string-join args " ")))))
 
  ;;;###autoload (autoload 'uv-init "uv" nil t)
 (transient-define-prefix uv-init ()
   "Initialize python project using `uv init'"
-  :show-help (lambda (obj) (uv-show-command-help "init"))
+  :show-help (lambda (_) (uv-show-command-help "init"))
   [["Options"
     ("n" "Name" "--name=" :prompt "Project name: ")
     ("d" "Description" "--description=" :prompt "Project description: ")
@@ -177,7 +173,9 @@ A venv is created unless NO-VENV is non-nil."
         #'uv--python-version>))
 
 (defun uv--python-version> (version-1 version-2)
-  "Compare python VERSION-1 with VERSION-2 to sort latest release first but prereleases last."
+  "Compare python VERSION-1 with VERSION-2 to sort latest release.
+
+Prereleases are put lastlast."
   (let ((prerelease-1 (uv--prerelease version-1))
         (prerelease-2 (uv--prerelease version-2)))
     (cond ((and (not prerelease-1) (not prerelease-2))
@@ -193,7 +191,7 @@ A venv is created unless NO-VENV is non-nil."
                      (t (string> kind-1 kind-2))))))))
 
 (defun uv--parse-python-version (version)
-  "Parse a python VERSION string and return a list '(`major' `minor' `patch')."
+  "Parse a python VERSION string and return a list `(major minor patch)'."
   (save-match-data
     (when (string-match "\\([[:digit:]]+\\)\\.\\([[:digit:]]+\\)\\.\\([[:digit:]]+\\)" version)
       (list (string-to-number (match-string 1 version))
@@ -224,7 +222,7 @@ suitable.  Use `uv-venv' instead."
  ;;;###autoload (autoload 'uv-venv "uv" nil t)
 (transient-define-prefix uv-venv ()
   "Create a virtual environment."
-  :show-help (lambda (obj) (uv-show-command-help "venv"))
+  :show-help (lambda (_) (uv-show-command-help "venv"))
   ["Options"
    (uv--select-python-version)
    ("s" "Seed environment" "--seed")]
@@ -266,18 +264,18 @@ suitable.  Use `uv-venv' instead."
  ;;;###autoload (autoload 'uv-add "uv" nil t)
 (transient-define-prefix uv-add ()
   "Add dependencies to the project"
-  :show-help (lambda (obj) (uv-show-command-help "add"))
+  :show-help (lambda (_) (uv-show-command-help "add"))
   ["Options"
    ("d" "Into development dependency group" "--dev")
    ("g" "Into a specified dependency group" "--group "
     :prompt "Choose group: "
     :class transient-option
-    :reader (lambda (prompt initial history)
+    :reader (lambda (prompt initial _history)
               (completing-read prompt (uv--known-dependency-groups) initial nil)))
    ("o" "To a specified extra" "--optional "
     :prompt "Choose extra: "
     :class transient-option
-    :reader (lambda (prompt initial history)
+    :reader (lambda (prompt initial _history)
               (completing-read prompt (uv--known-extras) initial nil)))
    ("e" "Specify extras (comma separated)" "--extra=")
    ("a" "Sync into active virtual environment." "--active")
@@ -289,7 +287,7 @@ suitable.  Use `uv-venv' instead."
  ;;;###autoload (autoload 'uv-remove "uv" nil t)
 (transient-define-prefix uv-remove ()
   "Remove dependencies from the project"
-  :show-help (lambda (obj) (uv-show-command-help "remove"))
+  :show-help (lambda (_) (uv-show-command-help "remove"))
   ["Options"
    ("d" "From development dependency group" "--dev")
    ("g" "From a specified depencency group" "--group "
@@ -459,7 +457,7 @@ Example:
  ;;;###autoload (autoload 'uv-sync "uv" nil t)
 (transient-define-prefix uv-sync ()
   "Update the project's environment"
-  :show-help (lambda (obj) (uv-show-command-help "sync"))
+  :show-help (lambda (_) (uv-show-command-help "sync"))
   [uv--dependency-options
    ["Sync options"
     ("ne" "Install editable dependencies non-editable." "--non-editable")
@@ -494,7 +492,7 @@ Example:
   (gethash (project-current) uv--last-run-args))
 
 (defun uv--put-project-last-run-args (args)
-  "Remember ARGS as the argument list of the current project's last `uv run' command."
+  "Remember ARGS as the argument list of the current project's last `uv run'."
   (puthash (project-current) args uv--last-run-args))
 
 (defun uv-run-cmd (command &optional args)
@@ -524,7 +522,7 @@ suitable.  Use `uv-run' instead."
  ;;;###autoload (autoload 'uv-run "uv" nil t)
 (transient-define-prefix uv-run ()
   "Run a command or script"
-  :show-help (lambda (obj) (uv-show-command-help "run"))
+  :show-help (lambda (_) (uv-show-command-help "run"))
   :value #'uv--project-last-run-args
   [uv--dependency-options
    ["Run options"
@@ -554,7 +552,7 @@ suitable.  Use `uv-run' instead."
   (gethash (project-current) uv--last-tool-run-args))
 
 (defun uv--put-project-last-tool-run-args (args)
-  "Remember ARGS as the argument list of the current project's last `uv tool run' command."
+  "Remember ARGS as the argument list of the current project's last `uv tool run'."
   (puthash (project-current) args uv--last-tool-run-args))
 
 (defun uv-tool-run-cmd (tool &optional args)
@@ -584,7 +582,7 @@ suitable.  Use `uv-sync' instead."
 ;;;###autoload (autoload 'uv-tool-run "uv" nil t)
 (transient-define-prefix uv-tool-run ()
   "Run a tool by `uv tool run'"
-  :show-help (lambda (obj) (uv-show-command-help "tool" "run"))
+  :show-help (lambda (_) (uv-show-command-help "tool" "run"))
   :value #'uv--project-last-tool-run-args
   [["Options"
     ("f" "Use a the given package to provide the command" "--from "
@@ -630,7 +628,7 @@ suitable.  Use `uv-sync' instead."
  ;;;###autoload (autoload 'uv-lock "uv" nil t)
 (transient-define-prefix uv-lock ()
   "Update the project's lockfile"
-  :show-help (lambda (obj) (uv-show-command-help "lock"))
+  :show-help (lambda (_) (uv-show-command-help "lock"))
   [["Options"
     ("c" "Check if the lockfile is up-to-date." "--check")
     ("C" "Assert that a `uv.lock` exists without checking if it is up-to-date." "--check-exists")
@@ -640,7 +638,7 @@ suitable.  Use `uv-sync' instead."
     ("U" "Allow upgrades for a specific package, ignoring pinned versions." "--package-upgrade "
      :prompt "Allow upgrade for: "
      :class transient-option
-     :reader (lambda (prompt initial history)
+     :reader (lambda (prompt _initial _history)
                (completing-read prompt (uv--known-locked-packages) nil t)))]]
   ["lock" ("RET" "Lock dependencies" uv-lock-cmd)])
 
@@ -660,7 +658,7 @@ suitable.  Use `uv-lock' instead."
 
  ;;;###autoload (autoload 'uv "uv" nil t)
 (transient-define-prefix uv ()
-  :show-help (lambda (obj) (uv-show-uv-help))
+  :show-help (lambda (_) (uv-show-uv-help))
   ["Commands:"
    ("i" "init – Initialize a project" uv-init)
    ("v" "venv – Create a virtual environment" uv-venv)
@@ -671,11 +669,11 @@ suitable.  Use `uv-lock' instead."
    ("t" "tool run – run a python tool" uv-tool-run)
    ("R" "run – Run a command or script" uv-run)])
 
-(defun uv--do-command (cmd)
-  "Perform the command CMD in a compint compile buffer in the project's root dir."
+(defun uv--do-command (command)
+  "Perform COMMAND in a compint compile buffer in the project's root dir."
   (let* ((project (project-current))
          (default-directory (if project (project-root project) default-directory)))
-    (let ((buf (compile cmd t))
+    (let ((buf (compile command t))
           (hook uv--after-run-hook)
           (fail-hook uv--run-fail-hook))
       (with-current-buffer buf
@@ -686,12 +684,12 @@ suitable.  Use `uv-lock' instead."
                       (funcall fail-hook buf msg)))
                   nil 'local)))))
 
-(defun uv--do-command-maybe-terminal (cmd terminal)
-  "Perform the command CMD either as compile or if TERMINAL is non nil in `ansi-term'."
+(defun uv--do-command-maybe-terminal (command terminal)
+  "Perform COMMAND either as compile or if TERMINAL is non nil in `ansi-term'."
   (let ((default-directory (uv--project-root)))
     (if terminal
-        (ansi-term cmd)
-    (compile cmd t))))
+        (ansi-term command)
+    (compile command t))))
 
 (defun uv--group-arg (args)
   "Extract dependency groups and extras from transient ARGS."
