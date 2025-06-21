@@ -414,14 +414,7 @@ Example:
             (push "dev" selection))))
     (oset suffix value new-selection)))
 
-(defmacro uv--transient-define-group (name &rest groups)
-  "Temporary hack."
-  (declare (indent defun))
-  `(if (macrop 'transient-define-group)
-       (transient-define-group ,name ,@groups)
-     (defconst ,name ,@groups)))
-
-(uv--transient-define-group uv--dependency-options
+(transient-define-group uv--dependency-options
   ["Dependency options"
    (uv--extra-multiswitch)
    ("E" "(de)select all extras" uv--select-or-deselect-all-extras)
@@ -430,7 +423,7 @@ Example:
    ("d" "with dev dependency group" uv--toggle-dev-group)
    ])
 
-(uv--transient-define-group uv--cache-options
+(transient-define-group uv--cache-options
   ["Cache options"
    ("nc" "Do not use the cache" "--no-cache")
    ("r" "Refresh all cached data" "--refresh")
@@ -440,7 +433,7 @@ Example:
     :reader (lambda (prompt initial history)
               (read-string prompt initial history)))])
 
-(uv--transient-define-group uv--resolver-options
+(transient-define-group uv--resolver-options
   ["Resolver options"
    ("U" "Allow package upgrades" "--upgrade")
    ("P" "Allow upgrade for given package" "--package-upgrade "
