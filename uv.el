@@ -672,24 +672,31 @@ suitable.  Use `uv-lock' instead."
 (defun uv--do-command (command)
   "Perform COMMAND in a compint compile buffer in the project's root dir."
   (let* ((project (project-current))
-         (default-directory (if project (project-root project) default-directory)))
-    (let ((buf (compile command t))
-          (hook uv--after-run-hook)
-          (fail-hook uv--run-fail-hook))
-      (with-current-buffer buf
-        (add-hook 'compilation-finish-functions
-                  (lambda (buf msg)
-                    (when hook (funcall hook))
-                    (when (and fail-hook (string-match-p "exited abnormally" msg))
-                      (funcall fail-hook buf msg)))
-                  nil 'local)))))
+         (default-directory (if project (project-root project) default-directory))
+         (command (split-string-shell-command (string-trim command)))
+         (proc-name (format "uv %s" (cadr command)))
+         (buf (generate-new-buffer (format "*%s" proc-name))))
+    (with-current-buffer buf
+      (let ((inhibit-read-only t))
+        (erase-buffer)
+        (insert (string-join command " "))
+        (insert "\n"))
+      (apply #'make-comint-in-buffer proc-name buf (car command) nil (cdr command))
+      (set-process-sentinel (get-buffer-process buf) #'uv--process-sentinel))
+    buf))
+
+(defun uv--process-sentinel (process event)
+  (message "%s %s" (process-name process) (string-trim event))
+  (if (string-suffix-p "finished\n" event)
+      (when uv--after-run-hook (funcall uv--after-run-hook))
+    (when uv--run-fail-hook (funcall uv--run-fail-hook))))
 
 (defun uv--do-command-maybe-terminal (command terminal)
   "Perform COMMAND either as compile or if TERMINAL is non nil in `ansi-term'."
   (let ((default-directory (uv--project-root)))
     (if terminal
         (ansi-term command)
-    (compile command t))))
+      (temp-buffer-window-show (uv--do-command command)))))
 
 (defun uv--group-arg (args)
   "Extract dependency groups and extras from transient ARGS."
