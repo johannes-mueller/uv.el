@@ -475,6 +475,7 @@ python-dateutil==2.9.0.post0
     (should-not (uv-activate-venv))))
 
 (ert-deftest uv--activate-venv-venv-available ()
+  (setq uv--projects-last-venv nil)
   (mocker-let ((project-current () ((:input '() :output (cons 'project "/foo/bar/project"))))
                (project-root (project) ((:input '((project . "/foo/bar/project"))
                                          :output "/foo/bar/project")))
@@ -490,6 +491,7 @@ python-dateutil==2.9.0.post0
     (should (equal python-shell-virtualenv-root "/foo/bar/project/.venv"))))
 
 (ert-deftest uv--activate-venv-unify-path ()
+  (setq uv--projects-last-venv nil)
   (mocker-let ((project-current () ((:input '() :output (cons 'project "/foo/bar/project"))))
                (project-root (project) ((:input '((project . "/foo/bar/project"))
                                          :output "/foo/bar/project")))
@@ -505,6 +507,7 @@ python-dateutil==2.9.0.post0
 
 
 (ert-deftest uv--activate-venv-venv-expand-path ()
+  (setq uv--projects-last-venv nil)
   (let ((native-comp-enable-subr-trampolines nil))
     (mocker-let ((project-current () ((:input '() :output (cons 'project "~/project"))))
                  (project-root (project) ((:input '((project . "~/project"))
@@ -524,6 +527,7 @@ python-dateutil==2.9.0.post0
 
 
 (ert-deftest uv--activate-and-deactivate-venv ()
+  (setq uv--projects-last-venv nil)
   (mocker-let ((project-current () ((:input '() :output (cons 'project "/foo/bar/project"))))
                (project-root (project) ((:input '((project . "/foo/bar/project"))
                                          :output "/foo/bar/project")))
