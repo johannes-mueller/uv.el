@@ -709,15 +709,18 @@ suitable.  Use `uv-lock' instead."
   (let* ((candidate-venv (expand-file-name (concat (uv--project-root) ".venv")))
          (candidate-bin (concat (file-name-as-directory candidate-venv) "bin")))
     (if (file-directory-p candidate-bin)
-        (let ((old-venv-info `(:path ,(getenv "PATH")
-                              :venv ,(getenv "VIRTUAL_ENV")
-                              :python-home ,(getenv "PYTHONHOME"))))
-          (unless (equal old-venv-info uv--projects-last-venv)
+        (let ((current-path (or (plist-get uv--projects-last-venv :path)
+                                (getenv "PATH")))
+              (virtual-env (getenv "VIRTUAL_ENV")))
+          (unless (equal virtual-env candidate-venv)
             (setenv "VIRTUAL_ENV" candidate-venv)
             (setenv "PYTHONHOME" nil)
-            (setenv "PATH" (string-join (cons candidate-bin (remove candidate-bin (string-split (plist-get old-venv-info :path) ":"))) ":"))
+            (setenv "PATH" (string-join (cons candidate-bin (remove candidate-bin (string-split current-path ":"))) ":"))
             (setq python-shell-virtualenv-root candidate-venv)
-            (setq uv--projects-last-venv old-venv-info)
+            (setq uv--projects-last-venv
+                  `(:path ,current-path
+                    :venv ,virtual-env
+                    :python-home ,(getenv "PYTHONHOME")))
             candidate-venv))
       (uv-deactivate-venv))))
 
@@ -725,7 +728,8 @@ suitable.  Use `uv-lock' instead."
   (setq python-shell-virtualenv-root nil)
   (setenv "VIRTUAL_ENV" nil)
   (setenv "PYTHONHOME" (plist-get uv--projects-last-venv :python-home))
-  (when-let* ((path (plist-get uv--projects-last-venv :path))) (setenv "PATH" path))
+  (when-let* ((path (plist-get uv--projects-last-venv :path)))
+    (setenv "PATH" path))
   (setq uv--projects-last-venv nil))
 
 (cl-defmethod transient-infix-read ((obj uv--transient-multiswitch))
@@ -767,8 +771,8 @@ OJB is just the self reference."
 
 (defun uv--project-root ()
   "Save determination of the project root with `default-directory' as default."
-  (if (project-current)
-      (file-name-as-directory (project-root (project-current)))
+  (if-let* ((pc (project-current)))
+      (file-name-as-directory (project-root pc))
     default-directory))
 
 (defun uv--command-stdout-to-string (command-line)
