@@ -1,4 +1,4 @@
-;;; uv --- An interface for the uv python package manager -*- lexical-binding: t; -*-
+;;; uv.el --- An interface for the uv python package manager -*- lexical-binding: t; -*-
 
 ;; Author: Johannes Mueller <github@johannes-mueller.org>
 ;; URL: https://github.com/johannes-mueller/uv.el
