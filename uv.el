@@ -91,6 +91,23 @@ command functions.")
 
 (defvar uv--run-fail-hook nil)
 
+(defvar uv--special-hook nil
+  "Variable to schedule venv creation after uv init finished")
+
+
+(defun uv--schedule-special-hook (hook-function)
+  "Schedule execuion of HOOK-FUNCTION after uv process."
+  (setq uv--special-hook hook-function))
+
+(defun uv--perform-special-hook ()
+  "Perform the venv creation."
+  (when uv--special-hook
+    (funcall uv--special-hook))
+  (setq uv--special-hook nil))
+
+(defun uv--cancel-special-hook ()
+  (setq uv--special-hook nil))
+
 (defun uv-init-cmd (directory &optional args no-venv)
   "Perform the `uv init' command in DIRECTORY with ARGS.
 
@@ -105,12 +122,13 @@ A venv is created unless NO-VENV is non-nil."
          (no-venv (cl-find "no-venv" (transient-args transient-current-command) :test 'equal))
          (args (cl-remove "no-venv" (transient-args transient-current-command) :test 'equal)))
      (append (list directory) (list args) (list no-venv))))
-  (let ((args (append (uv--quote-string-transient-args args) (list directory)))
-        (uv--after-run-hook (lambda ()
-                              (unless no-venv
-                                (let ((default-directory directory))
-                                  (ignore (process-lines "uv" "venv"))))
-                              (dired directory))))
+  (let ((args (append (uv--quote-string-transient-args args) (list directory))))
+    (uv--schedule-special-hook
+     (lambda ()
+       (unless no-venv
+         (let ((default-directory directory))
+           (ignore (process-lines "uv" "venv"))))
+       (dired directory)))
     (uv--do-command (concat "uv init " (string-join args " ")))))
 
  ;;;###autoload (autoload 'uv-init "uv" nil t)
@@ -669,27 +687,48 @@ suitable.  Use `uv-lock' instead."
    ("t" "tool run – run a python tool" uv-tool-run)
    ("R" "run – Run a command or script" uv-run)])
 
+
+
 (defun uv--do-command (command)
   "Perform COMMAND in a compint compile buffer in the project's root dir."
-  (let* ((project (project-current))
-         (default-directory (if project (project-root project) default-directory))
-         (command (split-string-shell-command (string-trim command)))
-         (proc-name (format "uv %s" (cadr command)))
-         (buf (generate-new-buffer (format "*%s" proc-name))))
+  (when-let* ((default-directory (uv--project-root))
+              (command (split-string-shell-command (string-trim command)))
+              (proc-name (format "uv %s" (cadr command)))
+              (buf (uv--process-get-buffer-if-available proc-name)))
     (with-current-buffer buf
       (let ((inhibit-read-only t))
         (erase-buffer)
         (insert (string-join command " "))
         (insert "\n"))
-      (apply #'make-comint-in-buffer proc-name buf (car command) nil (cdr command))
+      (let ((args (uv--quote-string-transient-args (cdr command))))
+        (apply #'make-comint-in-buffer proc-name buf (car command) nil args))
       (set-process-sentinel (get-buffer-process buf) #'uv--process-sentinel))
     buf))
 
+(defun uv--process-get-buffer-if-available (proc-name)
+  "Return the buffer of PROC-NAME if it is available or create it."
+  (let* ((buffer-name (format "*%s*" proc-name))
+         (buf (get-buffer-create buffer-name)))
+    (when (not (and (process-live-p (get-buffer-process buf))
+                    (y-or-n-p (format "A process `%s' already running.  Kill it?"))))
+      buf)))
+
 (defun uv--process-sentinel (process event)
+  "Perform scheduled stuff after a uv PROCESS finished with EVENT."
   (message "%s %s" (process-name process) (string-trim event))
   (if (string-suffix-p "finished\n" event)
-      (when uv--after-run-hook (funcall uv--after-run-hook))
-    (when uv--run-fail-hook (funcall uv--run-fail-hook))))
+      (uv--perform-success-hooks)
+    (uv--perform-failure-hooks)))
+
+(defun uv--perform-success-hooks ()
+  "Perform the scheduled stuff after successful uv process."
+  (uv--perform-special-hook)
+  (when uv--after-run-hook (funcall uv--after-run-hook)))
+
+(defun uv--perform-failure-hooks ()
+  "Perform the scheduled stuff after failed uv process."
+  (uv--cancel-special-hook)
+  (when uv--run-fail-hook (funcall uv--run-fail-hook)))
 
 (defun uv--do-command-maybe-terminal (command terminal)
   "Perform COMMAND either as compile or if TERMINAL is non nil in `ansi-term'."
