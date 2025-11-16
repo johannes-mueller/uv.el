@@ -32,6 +32,26 @@
          ,@body
          (uv--process-sentinel 'proc uv--test-cmd-result-event-string)))))
 
+(ert-deftest uv-get-buffer-no-conflict ()
+  (mocker-let ((get-buffer-create (proc-name) ((:input '("*uv cmd*") :output 'the-buffer)))
+               (get-buffer-process (buffer) ((:input '(the-buffer) :output 'the-process)))
+               (process-live-p (process) ((:input '(the-process) :output nil))))
+    (should (equal (uv--process-get-buffer-if-available "uv cmd") 'the-buffer))))
+
+(ert-deftest uv-get-buffer-with-conflict-kill ()
+  (mocker-let ((get-buffer-create (proc-name) ((:input '("*uv cmd*") :output 'the-buffer)))
+               (get-buffer-process (buffer) ((:input '(the-buffer) :output 'the-process)))
+               (process-live-p (process) ((:input '(the-process) :output 'process-live)))
+               (y-or-n-p (prompt) ((:input '("A process `uv cmd' is already running.  Kill it?") :output t))))
+    (should (equal (uv--process-get-buffer-if-available "uv cmd") 'the-buffer))))
+
+(ert-deftest uv-get-buffer-with-conflict-resign ()
+  (mocker-let ((get-buffer-create (proc-name) ((:input '("*uv cmd*") :output 'the-buffer)))
+               (get-buffer-process (buffer) ((:input '(the-buffer) :output 'the-process)))
+               (process-live-p (process) ((:input '(the-process) :output 'process-live)))
+               (y-or-n-p (prompt) ((:input '("A process `uv cmd' is already running.  Kill it?") :output nil))))
+    (should-not (uv--process-get-buffer-if-available "uv cmd"))))
+
 (ert-deftest uv-init-no-args-current-project ()
   (mocker-let ((process-lines (cmd args) ((:input '("uv" "venv"))))
                (dired (dir) ((:input '("foo-bar")))))

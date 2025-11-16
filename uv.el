@@ -688,8 +688,6 @@ suitable.  Use `uv-lock' instead."
    ("t" "tool run – run a python tool" uv-tool-run)
    ("R" "run – Run a command or script" uv-run)])
 
-
-
 (defun uv--do-command (command)
   "Perform COMMAND in a compint compile buffer in the project's root dir."
   (when-let* ((default-directory (uv--project-root))
@@ -710,8 +708,8 @@ suitable.  Use `uv-lock' instead."
   "Return the buffer of PROC-NAME if it is available or create it."
   (let* ((buffer-name (format "*%s*" proc-name))
          (buf (get-buffer-create buffer-name)))
-    (when (not (and (process-live-p (get-buffer-process buf))
-                    (y-or-n-p (format "A process `%s' already running.  Kill it?" proc-name))))
+    (when (or (not (process-live-p (get-buffer-process buf)))
+              (y-or-n-p (format "A process `%s' is already running.  Kill it?" proc-name)))
       buf)))
 
 (defun uv--process-sentinel (process event)
