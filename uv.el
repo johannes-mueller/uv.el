@@ -92,7 +92,7 @@ command functions.")
 (defvar uv--run-fail-hook nil)
 
 (defvar uv--special-hook nil
-  "Variable to schedule venv creation after uv init finished")
+  "Variable to schedule venv creation after uv init finished.")
 
 
 (defun uv--schedule-special-hook (hook-function)
@@ -106,6 +106,7 @@ command functions.")
   (setq uv--special-hook nil))
 
 (defun uv--cancel-special-hook ()
+  "Cancel the special hook."
   (setq uv--special-hook nil))
 
 (defun uv-init-cmd (directory &optional args no-venv)
@@ -710,7 +711,7 @@ suitable.  Use `uv-lock' instead."
   (let* ((buffer-name (format "*%s*" proc-name))
          (buf (get-buffer-create buffer-name)))
     (when (not (and (process-live-p (get-buffer-process buf))
-                    (y-or-n-p (format "A process `%s' already running.  Kill it?"))))
+                    (y-or-n-p (format "A process `%s' already running.  Kill it?" proc-name))))
       buf)))
 
 (defun uv--process-sentinel (process event)
@@ -771,6 +772,7 @@ suitable.  Use `uv-lock' instead."
       (uv-deactivate-venv))))
 
 (defun uv-deactivate-venv ()
+  "Deactivate the current venv."
   (setq python-shell-virtualenv-root nil)
   (setenv "VIRTUAL_ENV" nil)
   (setenv "PYTHONHOME" (plist-get uv--projects-last-venv :python-home))
@@ -834,4 +836,4 @@ OJB is just the self reference."
 
 (provide 'uv)
 
-;;; ub.el ends here
+;;; uv.el ends here

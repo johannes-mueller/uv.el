@@ -1,3 +1,6 @@
+;;; uv.el-test.el --- An interface for the uv python package manager -*- lexical-binding: t; -*-
+
+;;; Code:
 
 (require 'mocker)
 (require 'uv)
@@ -11,8 +14,7 @@
   (declare (indent 1))
   `(let* ((stdout-buf (get-buffer-create "some-buffer"))
           (uv-args (cdr ,command))
-          (uv-cmd (car uv-args))
-          (buf-name (format "*uv %s" (car uv-args))))
+          (uv-cmd (car uv-args)))
      (with-temp-buffer
        (mocker-let ((project-current () ((:output-generator (lambda ()
                                                               (when uv--test-project
@@ -127,18 +129,19 @@
     (uv-add-cmd "pandas" '("--extra=excel ,hdf5"))))
 
 (defun alist-to-hash-table (alist)
+  "Turn ALIST into a hash table."
   (let ((hash-table (make-hash-table :test 'equal)))
-    (mapcar (lambda (elt)
-              (puthash (car elt) (if (listp (cdr elt)) (alist-to-hash-table (cdr elt))
-                                   (cdr elt))
-                       hash-table)
-              )
-            alist)
+    (dolist (elt alist)
+      (puthash (car elt)
+               (if (listp (cdr elt))
+                   (alist-to-hash-table (cdr elt))
+                 (cdr elt))
+               hash-table))
     hash-table))
 
 (defun equal-set (list-1 list-2)
+  "Check if LIST-1 and LIST-2 a represent the equal set."
   (eq (cl-set-difference list-1 list-2 :test 'equal) nil))
-
 
 (ert-deftest known-groups-no-project ()
   (mocker-let ((project-current () ((:output nil))))
@@ -459,7 +462,7 @@
 (ert-deftest known-locked-packages-empty ()
   (let ((native-comp-enable-subr-trampolines nil))
     (mocker-let ((current-buffer () ((:output "*some buffer*")))
-                 (call-process (cmd &rest _)
+                 (call-process (cmd &rest args)
                                ((:input '("uv" nil ("*some buffer*" nil) nil "export" "--no-hashes" "--no-emit-project" "--no-header" "--no-annotate" "--all-extras"))))
                  (buffer-string () ((:output ""))))
       (should (eq (uv--known-locked-packages) nil)))))
@@ -468,7 +471,7 @@
 (ert-deftest known-locked-packages-non-empty ()
   (let ((native-comp-enable-subr-trampolines nil))
     (mocker-let ((current-buffer () ((:output "*some buffer*")))
-                 (call-process (cmd &rest _)
+                 (call-process (cmd &rest args)
                                ((:input '("uv" nil ("*some buffer*" nil) nil "export" "--no-hashes" "--no-emit-project" "--no-header" "--no-annotate" "--all-extras"))))
                  (buffer-string () ((:output "numpy==2.2.4
 pandas==2.2.3
@@ -614,3 +617,8 @@ python-dateutil==2.9.0.post0
     (should (uv-activate-venv))
     (uv-deactivate-venv)
     (should-not python-shell-virtualenv-root)))
+
+
+(provide 'uv.el-test.el)
+
+;;; uv.el-test.el ends here
