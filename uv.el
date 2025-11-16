@@ -692,7 +692,7 @@ suitable.  Use `uv-lock' instead."
   "Perform COMMAND in a compint compile buffer in the project's root dir."
   (when-let* ((default-directory (uv--project-root))
               (command (split-string-shell-command (string-trim command)))
-              (proc-name (format "uv %s" (cadr command)))
+              (proc-name (uv--process-name command))
               (buf (uv--process-get-buffer-if-available proc-name)))
     (with-current-buffer buf
       (let ((inhibit-read-only t))
@@ -703,6 +703,13 @@ suitable.  Use `uv-lock' instead."
         (apply #'make-comint-in-buffer proc-name buf (car command) nil args))
       (set-process-sentinel (get-buffer-process buf) #'uv--process-sentinel))
     buf))
+
+(defun uv--process-name (command)
+  "Determine name for upcoming process according top COMMAND."
+  (pcase command
+    (`("uv" "run" . ,_) "uv run")
+    (`("uv" "tool" "run" . ,_) "uv tool run")
+    (_ "uv process")))
 
 (defun uv--process-get-buffer-if-available (proc-name)
   "Return the buffer of PROC-NAME if it is available or create it."
