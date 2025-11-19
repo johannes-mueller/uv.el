@@ -690,7 +690,7 @@ suitable.  Use `uv-lock' instead."
 
 (defun uv--do-command (command)
   "Perform COMMAND in a compint compile buffer in the project's root dir."
-  (when-let* ((default-directory (uv--project-root))
+  (when-let* ((workdir (uv--project-root))
               (command (split-string-shell-command (string-trim command)))
               (proc-name (uv--process-name command))
               (buf (uv--process-get-buffer-if-available proc-name)))
@@ -699,7 +699,8 @@ suitable.  Use `uv-lock' instead."
         (erase-buffer)
         (insert (string-join command " "))
         (insert "\n"))
-      (let ((args (uv--quote-string-transient-args (cdr command))))
+      (let ((args (uv--quote-string-transient-args (cdr command)))
+            (default-directory workdir))
         (apply #'make-comint-in-buffer proc-name buf (car command) nil args))
       (set-process-sentinel (get-buffer-process buf) #'uv--process-sentinel))
     buf))
