@@ -91,23 +91,22 @@ command functions.")
 
 (defvar uv--run-fail-hook nil)
 
-(defvar uv--special-hook nil
+(defvar uv--venv-create-hook nil
   "Variable to schedule venv creation after uv init finished.")
 
-
-(defun uv--schedule-special-hook (hook-function)
+(defun uv--schedule-venv-create-hook (hook-function)
   "Schedule execuion of HOOK-FUNCTION after uv process."
-  (setq uv--special-hook hook-function))
+  (setq uv--venv-create-hook hook-function))
 
-(defun uv--perform-special-hook ()
+(defun uv--perform-venv-create-hook ()
   "Perform the venv creation."
-  (when uv--special-hook
-    (funcall uv--special-hook))
-  (setq uv--special-hook nil))
+  (when uv--venv-create-hook
+    (funcall uv--venv-create-hook))
+  (setq uv--venv-create-hook nil))
 
-(defun uv--cancel-special-hook ()
+(defun uv--cancel-venv-create-hook ()
   "Cancel the special hook."
-  (setq uv--special-hook nil))
+  (setq uv--venv-create-hook nil))
 
 (defun uv-init-cmd (directory &optional args no-venv)
   "Perform the `uv init' command in DIRECTORY with ARGS.
@@ -124,7 +123,7 @@ A venv is created unless NO-VENV is non-nil."
          (args (cl-remove "no-venv" (transient-args transient-current-command) :test 'equal)))
      (append (list directory) (list args) (list no-venv))))
   (let ((args (append (uv--quote-string-transient-args args) (list directory))))
-    (uv--schedule-special-hook
+    (uv--schedule-venv-create-hook
      (lambda ()
        (unless no-venv
          (let ((default-directory directory))
@@ -729,12 +728,12 @@ suitable.  Use `uv-lock' instead."
 
 (defun uv--perform-success-hooks ()
   "Perform the scheduled stuff after successful uv process."
-  (uv--perform-special-hook)
+  (uv--perform-venv-create-hook)
   (when uv--after-run-hook (funcall uv--after-run-hook)))
 
 (defun uv--perform-failure-hooks ()
   "Perform the scheduled stuff after failed uv process."
-  (uv--cancel-special-hook)
+  (uv--cancel-venv-create-hook)
   (when uv--run-fail-hook (funcall uv--run-fail-hook)))
 
 (defun uv--do-command-maybe-terminal (command terminal)
