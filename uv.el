@@ -702,6 +702,7 @@ suitable.  Use `uv-lock' instead."
             (default-directory workdir))
         (apply #'make-comint-in-buffer proc-name buf (car command) nil args))
       (setq-local buffer-read-only t)
+      (setq-local buffer-file-name workdir)
       (set-process-sentinel (get-buffer-process buf) #'uv--process-sentinel))
     buf))
 

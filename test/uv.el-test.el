@@ -124,11 +124,17 @@
   (expect-process-call '("uv" "venv" "--seed")
     (uv-venv-cmd '("--seed"))))
 
-(ert-deftest uv-cmd-buffer-readonly ()
+(ert-deftest uv-cmd-buffer-read-only ()
   (expect-process-call '("uv" "venv")
-    (uv-venv-cmd)
-    (with-current-buffer "*uv process*"
-      (should buffer-read-only))))
+    (uv-venv-cmd))
+  (with-current-buffer "*uv process*"
+    (should buffer-read-only)))
+
+(ert-deftest uv-cmd-buffer-process-name ()
+  (expect-process-call '("uv" "venv")
+    (uv-venv-cmd))
+  (with-current-buffer "*uv process*"
+    (should (equal buffer-file-name "/foo/bar/project/"))))
 
 (ert-deftest uv-add-one ()
   (expect-process-call '("uv" "add" "pandas")
