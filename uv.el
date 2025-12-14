@@ -701,6 +701,7 @@ suitable.  Use `uv-lock' instead."
       (let ((args (uv--quote-string-transient-args (cdr command)))
             (default-directory workdir))
         (apply #'make-comint-in-buffer proc-name buf (car command) nil args))
+      (setq-local buffer-read-only t)
       (set-process-sentinel (get-buffer-process buf) #'uv--process-sentinel))
     buf))
 

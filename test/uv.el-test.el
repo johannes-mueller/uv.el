@@ -13,7 +13,7 @@
 (defmacro expect-process-call (command &rest body)
   "Expect (compile COMMAND) while executing BODY."
   (declare (indent 1))
-  `(let* ((stdout-buf (get-buffer-create "some-buffer"))
+  `(let* ((stdout-buf (get-buffer-create "*uv process*"))
           (uv-args (cdr ,command)))
      (with-temp-buffer
        (mocker-let ((project-current () ((:output-generator (lambda ()
@@ -123,6 +123,12 @@
 (ert-deftest uv-venv-seed ()
   (expect-process-call '("uv" "venv" "--seed")
     (uv-venv-cmd '("--seed"))))
+
+(ert-deftest uv-cmd-buffer-readonly ()
+  (expect-process-call '("uv" "venv")
+    (uv-venv-cmd)
+    (with-current-buffer "*uv process*"
+      (should buffer-read-only))))
 
 (ert-deftest uv-add-one ()
   (expect-process-call '("uv" "add" "pandas")
