@@ -1,51 +1,101 @@
+;;; uv.el-test.el --- An interface for the uv python package manager -*- lexical-binding: t; -*-
+
+;;; Code:
+
 (require 'mocker)
 (require 'uv)
 (require 'cl-lib)
 
-(defmacro expect-compile (command &rest body)
+(defvar uv--test-cmd-result-event-string "finished\n")
+(defvar uv--test-project "/foo/bar/project")
+(defvar uv--test-process-name "uv process")
+
+(defmacro expect-process-call (command &rest body)
+  "Expect (compile COMMAND) while executing BODY."
   (declare (indent 1))
-  `(with-temp-buffer
-     (mocker-let ((compile (cmd comint) ((:input (list ,command t) :output (current-buffer)))))
-       (setq compilation-finish-functions "uuu")
-       ,@body
-       (when compilation-finish-functions (funcall (car compilation-finish-functions) ,(current-buffer) "msg")))))
+  `(let* ((stdout-buf (get-buffer-create "some-buffer"))
+          (uv-args (cdr ,command)))
+     (with-temp-buffer
+       (mocker-let ((project-current () ((:output-generator (lambda ()
+                                                              (when uv--test-project
+                                                                (cons 'project uv--test-project))))))
+                    (project-root (project) ((:input-matcher 'always
+                                              :output-generator (lambda (project) (cdr project))
+                                              :min-occur 0)))
+                    (uv--process-get-buffer-if-available (name) ((:input `(,uv--test-process-name) :output stdout-buf)))
+                    (make-comint-in-buffer (proc-name buf cmd startfile &rest args)
+                                           ((:input (append `(,uv--test-process-name ,stdout-buf "uv" nil) uv-args))))
+                    (get-buffer-process (buf) ((:input `(,stdout-buf) :output 'proc)))
+                    (set-process-sentinel (proc sentinel) ((:input '(proc uv--process-sentinel))))
+                    (process-name (proc) ((:input '(proc) :output "uv")))
+                    (message (format-string proc event) ((:input `("%s %s" "uv" ,(string-trim uv--test-cmd-result-event-string))))))
+         ,@body
+         (uv--process-sentinel 'proc uv--test-cmd-result-event-string)))))
+
+(ert-deftest uv-get-buffer-no-conflict ()
+  (mocker-let ((get-buffer-create (proc-name) ((:input '("*uv cmd*") :output 'the-buffer)))
+               (get-buffer-process (buffer) ((:input '(the-buffer) :output 'the-process)))
+               (process-live-p (process) ((:input '(the-process) :output nil))))
+    (should (equal (uv--process-get-buffer-if-available "uv cmd") 'the-buffer))))
+
+(ert-deftest uv-get-buffer-with-conflict-kill ()
+  (mocker-let ((get-buffer-create (proc-name) ((:input '("*uv cmd*") :output 'the-buffer)))
+               (get-buffer-process (buffer) ((:input '(the-buffer) :output 'the-process)))
+               (process-live-p (process) ((:input '(the-process) :output 'process-live)))
+               (y-or-n-p (prompt) ((:input '("A process `uv cmd' is already running.  Kill it?") :output t))))
+    (should (equal (uv--process-get-buffer-if-available "uv cmd") 'the-buffer))))
+
+(ert-deftest uv-get-buffer-with-conflict-resign ()
+  (mocker-let ((get-buffer-create (proc-name) ((:input '("*uv cmd*") :output 'the-buffer)))
+               (get-buffer-process (buffer) ((:input '(the-buffer) :output 'the-process)))
+               (process-live-p (process) ((:input '(the-process) :output 'process-live)))
+               (y-or-n-p (prompt) ((:input '("A process `uv cmd' is already running.  Kill it?") :output nil))))
+    (should-not (uv--process-get-buffer-if-available "uv cmd"))))
 
 (ert-deftest uv-init-no-args-current-project ()
   (mocker-let ((process-lines (cmd args) ((:input '("uv" "venv"))))
                (dired (dir) ((:input '("foo-bar")))))
-    (expect-compile "uv init foo-bar"
+    (expect-process-call '("uv" "init" "foo-bar")
       (uv-init-cmd "foo-bar"))))
 
 (ert-deftest uv-init-no-args-no-project-current ()
-  (mocker-let ((process-lines (cmd args) ((:input '("uv" "venv"))))
-               (project-current () ((:output nil)))
-               (dired (dir) ((:input '("foo-bar")))))
-    (expect-compile "uv init foo-bar"
-      (uv-init-cmd "foo-bar"))))
+  (let ((uv--test-project nil))
+    (mocker-let ((process-lines (cmd args) ((:input '("uv" "venv"))))
+                 (dired (dir) ((:input '("foo-bar")))))
+      (expect-process-call '("uv" "init" "foo-bar")
+        (uv-init-cmd "foo-bar")))))
 
 (ert-deftest uv-init-transient-name-no-masks ()
   (mocker-let ((process-lines (cmd args) ((:input '("uv" "venv"))))
                (dired (dir) ((:input '("foo-bar")))))
-    (expect-compile "uv init --name=FooBar foo-bar"
+    (expect-process-call '("uv" "init" "--name=FooBar" "foo-bar")
       (uv-init-cmd "foo-bar" '("--name=FooBar")))))
 
 (ert-deftest uv-init-transient-name-with-masks ()
   (mocker-let ((process-lines (cmd args) ((:input '("uv" "venv"))))
                (dired (dir) ((:input '("foo-bar")))))
-    (expect-compile "uv init --name=My\\ Project foo-bar"
+    (expect-process-call '("uv" "init" "--name=My\\ Project" "foo-bar")
       (uv-init-cmd "foo-bar" '("--name=My Project")))))
 
 (ert-deftest uv-init-transient-python-version ()
   (mocker-let ((process-lines (cmd args) ((:input '("uv" "venv"))))
                (dired (dir) ((:input '("foo-bar")))))
-    (expect-compile "uv init --python 3.12 foo-bar"
+    (expect-process-call '("uv" "init" "--python" "3.12" "foo-bar")
       (uv-init-cmd "foo-bar" '("--python 3.12")))))
 
 (ert-deftest uv-init-transient-no-readme ()
   (mocker-let ((process-lines (cmd args) ((:input '("uv" "venv"))))
                (dired (dir) ((:input '("foo-bar")))))
-    (expect-compile "uv init --no-readme foo-bar"
+    (expect-process-call '("uv" "init" "--no-readme" "foo-bar")
       (uv-init-cmd "foo-bar" '("--no-readme")))))
+
+(ert-deftest uv-init-failure ()
+  (mocker-let ((process-lines (cmd args) ((:input '("uv" "venv") :occur 0)))
+               (dired (dir) ((:input '("foo-bar") :occur 0))))
+    (let ((uv--test-cmd-result-event-string "failure\n"))
+      (expect-process-call '("uv" "init" "foo-bar")
+        (uv-init-cmd "foo-bar")))))
+
 
 (ert-deftest uv-available-python-versions-sorted ()
   (mocker-let ((process-lines (cmd &rest args) ((:input '("uv" "python" "list" "--output-format=json")
@@ -67,50 +117,51 @@
 ;;     (should (equal (uv--available-python-versions) '("3.13" "3.13.1" "3.13.2" "3.12" "3.12.1" "3.12.2")))))
 
 (ert-deftest uv-venv-plain ()
-  (expect-compile "uv venv"
+  (expect-process-call '("uv" "venv")
     (uv-venv-cmd)))
 
 (ert-deftest uv-venv-seed ()
-  (expect-compile "uv venv --seed"
+  (expect-process-call '("uv" "venv" "--seed")
     (uv-venv-cmd '("--seed"))))
 
 (ert-deftest uv-add-one ()
-  (expect-compile "uv add pandas"
+  (expect-process-call '("uv" "add" "pandas")
     (uv-add-cmd "pandas")))
 
 (ert-deftest uv-add-dev ()
-  (expect-compile "uv add --dev pytest"
+  (expect-process-call '("uv" "add" "--dev" "pytest")
     (uv-add-cmd "pytest" '("--dev"))))
 
 (ert-deftest uv-add-extra-two-only-comma ()
-  (expect-compile "uv add --extra=excel --extra=hdf5 pandas"
+  (expect-process-call '("uv" "add" "--extra=excel" "--extra=hdf5" "pandas")
     (uv-add-cmd "pandas" '("--extra=excel,hdf5"))))
 
 (ert-deftest uv-add-extra-two-comma-ws ()
-  (expect-compile "uv add --extra=excel --extra=hdf5 pandas"
+  (expect-process-call '("uv" "add" "--extra=excel" "--extra=hdf5" "pandas")
     (uv-add-cmd "pandas" '("--extra=excel, hdf5"))))
 
 (ert-deftest uv-add-extra-two-only-ws ()
-  (expect-compile "uv add --extra=excel --extra=hdf5 pandas"
+  (expect-process-call '("uv" "add" "--extra=excel" "--extra=hdf5" "pandas")
     (uv-add-cmd "pandas" '("--extra=excel hdf5"))))
 
 (ert-deftest uv-add-extra-two-ws-comma ()
-  (expect-compile "uv add --extra=excel --extra=hdf5 pandas"
+  (expect-process-call '("uv" "add" "--extra=excel" "--extra=hdf5" "pandas")
     (uv-add-cmd "pandas" '("--extra=excel ,hdf5"))))
 
 (defun alist-to-hash-table (alist)
+  "Turn ALIST into a hash table."
   (let ((hash-table (make-hash-table :test 'equal)))
-    (mapcar (lambda (elt)
-              (puthash (car elt) (if (listp (cdr elt)) (alist-to-hash-table (cdr elt))
-                                   (cdr elt))
-                       hash-table)
-              )
-            alist)
+    (dolist (elt alist)
+      (puthash (car elt)
+               (if (listp (cdr elt))
+                   (alist-to-hash-table (cdr elt))
+                 (cdr elt))
+               hash-table))
     hash-table))
 
 (defun equal-set (list-1 list-2)
+  "Check if LIST-1 and LIST-2 a represent the equal set."
   (eq (cl-set-difference list-1 list-2 :test 'equal) nil))
-
 
 (ert-deftest known-groups-no-project ()
   (mocker-let ((project-current () ((:output nil))))
@@ -283,9 +334,14 @@
                                                    :output '("--optional my-extra")))))
       (should (equal (uv--known-dependencies) '("scipy"))))))
 
+(defmacro expect-run-process-call (command &rest body)
+  "Expect tool COMMAND call while executing BODY."
+  (declare (indent 1))
+  `(let ((uv--test-process-name "uv run"))
+     (expect-process-call ,command ,@body)))
 
 (ert-deftest uv-run-command-compile ()
-  (mocker-let ((compile (cmd comint) ((:input '("uv run  -- foo-command" t)))))
+  (expect-run-process-call '("uv" "run" "--" "foo-command")
     (uv-run-cmd "foo-command")))
 
 (ert-deftest uv-run-command-ansi-term ()
@@ -294,59 +350,68 @@
 
 (ert-deftest uv-run-command-history-one-project ()
   (clrhash uv--run-history)
-  (mocker-let ((compile (cmd comint) ((:input '("uv run  -- foo-command" t))
-                                      (:input '("uv run  -- other-command" t))
-                                      (:input '("uv run  -- foo-command" t))))
-               (project-current () ((:input '() :output (cons 'project "/foo/bar/project"))))
-               (project-root (project) ((:input '((project . "/foo/bar/project"))
-                                         :output "/foo/bar/project"))))
+
+  (expect-run-process-call '("uv" "run" "--" "foo-command")
     (should-not (uv--project-run-command-history))
     (uv-run-cmd "foo-command")
-    (should (equal (uv--project-run-command-history) '("foo-command")))
+    (should (equal (uv--project-run-command-history) '("foo-command"))))
+
+  (expect-run-process-call '("uv" "run" "--" "other-command")
     (uv-run-cmd "other-command")
-    (should (equal (uv--project-run-command-history) '("other-command" "foo-command")))
+    (should (equal (uv--project-run-command-history) '("other-command" "foo-command"))))
+
+  (expect-run-process-call '("uv" "run" "--" "foo-command")
     (uv-run-cmd "foo-command")
     (should (equal (uv--project-run-command-history) '("foo-command" "other-command")))))
 
 (ert-deftest uv-run-command-history-two-projects ()
   (clrhash uv--run-history)
-  (mocker-let ((compile (cmd comint) ((:input '("uv run  -- foo-command" t))))
-               (project-current () ((:input '() :output (cons 'project "/foo/bar/project"))))
-               (project-root (project) ((:input '((project . "/foo/bar/project"))
-                                         :output "/foo/bar/project"))))
+
+  (expect-run-process-call '("uv" "run" "--" "foo-command")
     (should-not (uv--project-run-command-history))
     (uv-run-cmd "foo-command")
     (should (equal (uv--project-run-command-history) '("foo-command"))))
-  (mocker-let ((compile (cmd comint) ((:input '("uv run  -- bar-command" t))))
-               (project-current () ((:input '() :output (cons 'project "/bar/bar/project"))))
-               (project-root (project) ((:input '((project . "/bar/bar/project"))
-                                         :output "/bar/bar/project"))))
-    (should-not (uv--project-run-command-history))
-    (uv-run-cmd "bar-command")
-    (should (equal (uv--project-run-command-history) '("bar-command"))))
-  (mocker-let ((project-current () ((:input '() :output (cons 'project "/foo/bar/project")))))
+
+  (let ((uv--test-project "/some/other/project"))
+    (expect-run-process-call '("uv" "run" "--" "foo-command")
+      (should-not (uv--project-run-command-history))
+      (uv-run-cmd "foo-command")
+      (should (equal (uv--project-run-command-history) '("foo-command")))))
+
+  (expect-run-process-call '("uv" "run" "--" "foo-command")
+    (should (equal (uv--project-run-command-history) '("foo-command")))
+    (uv-repeat-run)
     (should (equal (uv--project-run-command-history) '("foo-command")))))
 
 (ert-deftest uv-run-command-repeat-one-project ()
   (clrhash uv--run-history)
-  (mocker-let ((compile (cmd comint) ((:input '("uv run  -- foo-command" t) :occur 2)
-                                      (:input '("uv run  -- other-command" t) :occur 2)
-                                      (:input '("uv run --module -- foo-command" t) :occur 2)
-                                      (:input '("uv run  -- foo-command" t) :occur 2)))
-               (project-current () ((:input '() :output (cons 'project "/foo/bar/project"))))
-               (project-root (project) ((:input '((project . "/foo/bar/project"))
-                                         :output "/foo/bar/project"))))
-    (uv-run-cmd "foo-command")
-    (uv-repeat-run)
-    (uv-run-cmd "other-command")
-    (uv-repeat-run)
-    (uv-run-cmd "foo-command" '("--module"))
-    (uv-repeat-run)
-    (uv-run-cmd "foo-command")
+  (mocker-let ((project-current () ((:input '() :output (cons 'project "/foo/bar/project")))))
+    (should-not (uv--project-run-command-history)))
+  (expect-run-process-call '("uv" "run" "--" "foo-command")
+    (uv-run-cmd "foo-command"))
+  (expect-run-process-call '("uv" "run" "--" "foo-command")
+    (uv-repeat-run))
+  (expect-run-process-call '("uv" "run" "--" "other-command")
+    (uv-run-cmd "other-command"))
+  (expect-run-process-call '("uv" "run" "--" "other-command")
+    (uv-repeat-run))
+  (expect-run-process-call '("uv" "run" "--module" "--" "foo-command")
+    (uv-run-cmd "foo-command" '("--module")))
+  (expect-run-process-call '("uv" "run" "--module" "--" "foo-command")
+    (uv-repeat-run))
+  (expect-run-process-call '("uv" "run" "--" "foo-command")
+    (uv-run-cmd "foo-command"))
+  (expect-run-process-call '("uv" "run" "--" "foo-command")
     (uv-repeat-run)))
 
+(defmacro expect-tool-run-process-call (command &rest body)
+  "Expect tool COMMAND call while executing BODY."
+  (declare (indent 1))
+  `(let ((uv--test-process-name "uv tool run"))
+     (expect-process-call ,command ,@body)))
+
 (ert-deftest uv-tool-run-command-compile ()
-  (mocker-let ((compile (cmd comint) ((:input '("uv tool run  foo-command" t)))))
+  (expect-tool-run-process-call '("uv" "tool" "run" "foo-command")
     (uv-tool-run-cmd "foo-command")))
 
 (ert-deftest uv-tool-run-command-ansi-term ()
@@ -355,55 +420,58 @@
 
 (ert-deftest uv-tool-run-command-history-one-project ()
   (clrhash uv--tool-run-history)
-  (mocker-let ((compile (cmd comint) ((:input '("uv tool run  foo-command" t))
-                                      (:input '("uv tool run  other-command" t))
-                                      (:input '("uv tool run  foo-command" t))))
-               (project-current () ((:input '() :output (cons 'project "/foo/bar/project"))))
-               (project-root (project) ((:input '((project . "/foo/bar/project"))
-                                         :output "/foo/bar/project"))))
+
+  (expect-tool-run-process-call '("uv" "tool" "run" "foo-command")
     (should-not (uv--project-tool-run-command-history))
     (uv-tool-run-cmd "foo-command")
-    (should (equal (uv--project-tool-run-command-history) '("foo-command")))
+    (should (equal (uv--project-tool-run-command-history) '("foo-command"))))
+
+  (expect-tool-run-process-call '("uv" "tool" "run" "other-command")
     (uv-tool-run-cmd "other-command")
-    (should (equal (uv--project-tool-run-command-history) '("other-command" "foo-command")))
+    (should (equal (uv--project-tool-run-command-history) '("other-command" "foo-command"))))
+
+  (expect-tool-run-process-call '("uv" "tool" "run" "foo-command")
     (uv-tool-run-cmd "foo-command")
     (should (equal (uv--project-tool-run-command-history) '("foo-command" "other-command")))))
 
 (ert-deftest uv-tool-run-command-history-two-projects ()
   (clrhash uv--tool-run-history)
-  (mocker-let ((compile (cmd comint) ((:input '("uv tool run  foo-command" t))))
-               (project-current () ((:input '() :output (cons 'project "/foo/bar/project"))))
-               (project-root (project) ((:input '((project . "/foo/bar/project"))
-                                         :output "/foo/bar/project"))))
+
+  (expect-tool-run-process-call '("uv" "tool" "run" "foo-command")
     (should-not (uv--project-tool-run-command-history))
     (uv-tool-run-cmd "foo-command")
     (should (equal (uv--project-tool-run-command-history) '("foo-command"))))
-  (mocker-let ((compile (cmd comint) ((:input '("uv tool run  bar-command" t))))
-               (project-current () ((:input '() :output (cons 'project "/bar/bar/project"))))
-               (project-root (project) ((:input '((project . "/bar/bar/project"))
-                                         :output "/bar/bar/project"))))
-    (should-not (uv--project-tool-run-command-history))
-    (uv-tool-run-cmd "bar-command")
-    (should (equal (uv--project-tool-run-command-history) '("bar-command"))))
-  (mocker-let ((project-current () ((:input '() :output (cons 'project "/foo/bar/project")))))
+
+  (let ((uv--test-project "/some/other/project"))
+    (expect-tool-run-process-call '("uv" "tool" "run" "foo-command")
+      (should-not (uv--project-tool-run-command-history))
+      (uv-tool-run-cmd "foo-command")
+      (should (equal (uv--project-tool-run-command-history) '("foo-command")))))
+
+  (expect-tool-run-process-call '("uv" "tool" "run" "foo-command")
+    (should (equal (uv--project-tool-run-command-history) '("foo-command")))
+    (uv-repeat-tool-run)
     (should (equal (uv--project-tool-run-command-history) '("foo-command")))))
 
 (ert-deftest uv-tool-run-command-repeat-one-project ()
   (clrhash uv--tool-run-history)
-  (mocker-let ((compile (cmd comint) ((:input '("uv tool run  foo-command" t) :occur 2)
-                                      (:input '("uv tool run  other-command" t) :occur 2)
-                                      (:input '("uv tool run --module foo-command" t) :occur 2)
-                                      (:input '("uv tool run  foo-command" t) :occur 2)))
-               (project-current () ((:input '() :output (cons 'project "/foo/bar/project"))))
-               (project-root (project) ((:input '((project . "/foo/bar/project"))
-                                         :output "/foo/bar/project"))))
-    (uv-tool-run-cmd "foo-command")
-    (uv-repeat-tool-run)
-    (uv-tool-run-cmd "other-command")
-    (uv-repeat-tool-run)
-    (uv-tool-run-cmd "foo-command" '("--module"))
-    (uv-repeat-tool-run)
-    (uv-tool-run-cmd "foo-command")
+  (mocker-let ((project-current () ((:input '() :output (cons 'project "/foo/bar/project")))))
+    (should-not (uv--project-tool-run-command-history)))
+  (expect-tool-run-process-call '("uv" "tool" "run" "foo-command")
+    (uv-tool-run-cmd "foo-command"))
+  (expect-tool-run-process-call '("uv" "tool" "run" "foo-command")
+    (uv-repeat-tool-run))
+  (expect-tool-run-process-call '("uv" "tool" "run" "other-command")
+    (uv-tool-run-cmd "other-command"))
+  (expect-tool-run-process-call '("uv" "tool" "run" "other-command")
+    (uv-repeat-tool-run))
+  (expect-tool-run-process-call '("uv" "tool" "run" "--module" "foo-command")
+    (uv-tool-run-cmd "foo-command" '("--module")))
+  (expect-tool-run-process-call '("uv" "tool" "run" "--module" "foo-command")
+    (uv-repeat-tool-run))
+  (expect-tool-run-process-call '("uv" "tool" "run" "foo-command")
+    (uv-tool-run-cmd "foo-command"))
+  (expect-tool-run-process-call '("uv" "tool" "run" "foo-command")
     (uv-repeat-tool-run)))
 
 (ert-deftest uv-group-arg-empty ()
@@ -425,7 +493,7 @@
 (ert-deftest known-locked-packages-empty ()
   (let ((native-comp-enable-subr-trampolines nil))
     (mocker-let ((current-buffer () ((:output "*some buffer*")))
-                 (call-process (cmd &rest _)
+                 (call-process (cmd &rest args)
                                ((:input '("uv" nil ("*some buffer*" nil) nil "export" "--no-hashes" "--no-emit-project" "--no-header" "--no-annotate" "--all-extras"))))
                  (buffer-string () ((:output ""))))
       (should (eq (uv--known-locked-packages) nil)))))
@@ -434,7 +502,7 @@
 (ert-deftest known-locked-packages-non-empty ()
   (let ((native-comp-enable-subr-trampolines nil))
     (mocker-let ((current-buffer () ((:output "*some buffer*")))
-                 (call-process (cmd &rest _)
+                 (call-process (cmd &rest args)
                                ((:input '("uv" nil ("*some buffer*" nil) nil "export" "--no-hashes" "--no-emit-project" "--no-header" "--no-annotate" "--all-extras"))))
                  (buffer-string () ((:output "numpy==2.2.4
 pandas==2.2.3
@@ -580,3 +648,8 @@ python-dateutil==2.9.0.post0
     (should (uv-activate-venv))
     (uv-deactivate-venv)
     (should-not python-shell-virtualenv-root)))
+
+
+(provide 'uv.el-test.el)
+
+;;; uv.el-test.el ends here
