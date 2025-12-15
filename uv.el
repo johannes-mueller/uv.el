@@ -29,6 +29,7 @@
 (require 'project)
 (require 'subr-x)
 (require 'python)
+(require 'seq)
 
 (defclass uv--transient-multiswitch (transient-argument)
   ((scope :initarg :scope))
@@ -279,6 +280,43 @@ suitable.  Use `uv-venv' instead."
        (_ (gethash "dependencies" project-entry)))
      nil)))
 
+(defun uv--known-workspace-members ()
+  "Determine the known project workspace members."
+  (when-let* ((pyproject-data (uv--read-project-data))
+              (tool-entry (gethash "tool" pyproject-data))
+              (uv-entry (gethash "uv" tool-entry))
+              (workspace-entry (gethash "workspace" uv-entry)))
+    (let ((excludes (apply #'append (mapcar #'uv--expand-wildcard (gethash "exclude" workspace-entry)))))
+      (mapcar #'uv--strip-package-prefix
+       (seq-filter (lambda (elt) (not (member elt excludes)))
+                   (apply #'append (mapcar #'uv--expand-wildcard (gethash "members" workspace-entry))))))))
+
+(defun uv--expand-wildcard (relative-path)
+  "Expand wildcards in a RELATIVE-PATH to project root."
+  (if (seq-contains-p relative-path ?*)
+      (let* ((root (uv--project-root))
+             (root-len (length root)))
+        (mapcar (lambda (path) (substring path root-len))
+                (file-expand-wildcards (concat root relative-path))))
+    `(,relative-path)))
+
+(defun uv--strip-package-prefix (path)
+  "Strip \"packages\" prefix from PATH and fail if it is not a prefix."
+  (when (not (string-prefix-p "packages/" path))
+    (user-error "Workspace members outside `packages` subdirectory unsupported"))
+  (substring path 9))
+
+(defun uv--current-workspace-member ()
+  "Determine the workspace member of `default-directory'."
+  (when-let* ((root (uv--project-root))
+              (root-len (length root))
+              (relative-default-dir (substring (expand-file-name (file-name-as-directory default-directory)) root-len))
+              (workspace-members (mapcar #'file-name-as-directory (uv--known-workspace-members)))
+              (hit (seq-find
+                    (lambda (candidate)
+                      (string-prefix-p candidate relative-default-dir))
+                    workspace-members)))
+    (substring hit 0 -1)))
 
  ;;;###autoload (autoload 'uv-add "uv" nil t)
 (transient-define-prefix uv-add ()

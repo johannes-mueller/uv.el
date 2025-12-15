@@ -346,6 +346,110 @@
                                                    :output '("--optional my-extra")))))
       (should (equal (uv--known-dependencies) '("scipy"))))))
 
+(ert-deftest known-workspace-members-no-project ()
+  (mocker-let ((project-current () ((:output nil))))
+    (should-not (uv--known-workspace-members))))
+
+(ert-deftest known-workspace-members-no-workspace-members ()
+  (let ((transient-current-command 'uv-remove-menu)
+        (native-comp-enable-subr-trampolines nil))
+    (mocker-let ((project-current () ((:output (cons 'project "/foo/bar/project"))))
+                 (project-root (project) ((:input '((project . "/foo/bar/project"))
+                                           :output "/foo/bar/project")))
+                 (file-exists-p (file) ((:input '("/foo/bar/project/pyproject.toml") :output t)))
+                 (tomlparse-file (file) ((:input '("/foo/bar/project/pyproject.toml")
+                                          :output (alist-to-hash-table
+                                                   '(("project"
+                                                      ("version" . "0.1.0"))))))))
+      (should-not (uv--known-workspace-members)))))
+
+(ert-deftest known-workspace-members-simple-workspace-members ()
+  (let ((transient-current-command 'uv-remove-menu)
+        (native-comp-enable-subr-trampolines nil))
+    (mocker-let ((project-current () ((:output (cons 'project "/foo/bar/project"))))
+                 (project-root (project) ((:input '((project . "/foo/bar/project"))
+                                           :output "/foo/bar/project")))
+                 (file-exists-p (file) ((:input '("/foo/bar/project/pyproject.toml") :output t)))
+                 (tomlparse-file (file) ((:input '("/foo/bar/project/pyproject.toml")
+                                          :output (alist-to-hash-table
+                                                   '(("project"
+                                                      ("version" . "0.1.0"))
+                                                     ("tool"
+                                                      ("uv" ("workspace" ("members" . ["packages/foo-wb" "packages/bar-wb"]))))))))))
+      (should (equal (uv--known-workspace-members) '("foo-wb" "bar-wb"))))))
+
+(ert-deftest known-workspace-members-wildcard-workspace-members-no-excludes ()
+  (let ((transient-current-command 'uv-remove-menu)
+        (native-comp-enable-subr-trampolines nil))
+    (mocker-let ((project-current () ((:output (cons 'project "/foo/bar/project"))))
+                 (project-root (project) ((:input '((project . "/foo/bar/project"))
+                                           :output "/foo/bar/project")))
+                 (file-exists-p (file) ((:input '("/foo/bar/project/pyproject.toml") :output t)))
+                 (tomlparse-file (file) ((:input '("/foo/bar/project/pyproject.toml")
+                                          :output (alist-to-hash-table
+                                                   '(("project"
+                                                      ("version" . "0.1.0"))
+                                                     ("tool"
+                                                      ("uv" ("workspace" ("members" . ["packages/all*"])))))))))
+                 (file-expand-wildcards (pattern) ((:input '("/foo/bar/project/packages/all*")
+                                                    :output '("/foo/bar/project/packages/all-foo" "/foo/bar/project/packages/all-bar")))))
+      (should (equal (uv--known-workspace-members) '("all-foo" "all-bar"))))))
+
+(ert-deftest known-workspace-members-wildcard-workspace-members-with-simple-excludes ()
+  (let ((transient-current-command 'uv-remove-menu)
+        (native-comp-enable-subr-trampolines nil))
+    (mocker-let ((project-current () ((:output (cons 'project "/foo/bar/project"))))
+                 (project-root (project) ((:input '((project . "/foo/bar/project"))
+                                           :output "/foo/bar/project")))
+                 (file-exists-p (file) ((:input '("/foo/bar/project/pyproject.toml") :output t)))
+                 (tomlparse-file (file) ((:input '("/foo/bar/project/pyproject.toml")
+                                          :output (alist-to-hash-table
+                                                   '(("project"
+                                                      ("version" . "0.1.0"))
+                                                     ("tool"
+                                                      ("uv" ("workspace"
+                                                             ("members" . ["packages/all*"])
+                                                             ("exclude" . ["packages/all-bar"])))))))))
+                 (file-expand-wildcards (pattern) ((:input '("/foo/bar/project/packages/all*")
+                                                    :output '("/foo/bar/project/packages/all-foo" "/foo/bar/project/packages/all-bar")))))
+      (should (equal (uv--known-workspace-members) '("all-foo"))))))
+
+(ert-deftest known-workspace-members-wildcard-workspace-members-with-wildcard-excludes ()
+  (let ((transient-current-command 'uv-remove-menu)
+        (native-comp-enable-subr-trampolines nil))
+    (mocker-let ((project-current () ((:output (cons 'project "/foo/bar/project"))))
+                 (project-root (project) ((:input '((project . "/foo/bar/project"))
+                                           :output "/foo/bar/project")))
+                 (file-exists-p (file) ((:input '("/foo/bar/project/pyproject.toml") :output t)))
+                 (tomlparse-file (file) ((:input '("/foo/bar/project/pyproject.toml")
+                                          :output (alist-to-hash-table
+                                                   '(("project"
+                                                      ("version" . "0.1.0"))
+                                                     ("tool"
+                                                      ("uv" ("workspace"
+                                                             ("members" . ["packages/all*"])
+                                                             ("exclude" . ["packages/*bar"])))))))))
+                 (file-expand-wildcards (pattern) ((:input '("/foo/bar/project/packages/*bar")
+                                                    :output '("/foo/bar/project/packages/all-bar"))
+                                                   (:input '("/foo/bar/project/packages/all*")
+                                                    :output '("/foo/bar/project/packages/all-foo" "/foo/bar/project/packages/all-bar")))))
+      (should (equal (uv--known-workspace-members) '("all-foo"))))))
+
+(ert-deftest known-workspace-members-outside-packages-subdir-unsupported ()
+  (let ((transient-current-command 'uv-remove-menu)
+        (native-comp-enable-subr-trampolines nil))
+    (mocker-let ((project-current () ((:output (cons 'project "/foo/bar/project"))))
+                 (project-root (project) ((:input '((project . "/foo/bar/project"))
+                                           :output "/foo/bar/project")))
+                 (file-exists-p (file) ((:input '("/foo/bar/project/pyproject.toml") :output t)))
+                 (tomlparse-file (file) ((:input '("/foo/bar/project/pyproject.toml")
+                                          :output (alist-to-hash-table
+                                                   '(("project"
+                                                      ("version" . "0.1.0"))
+                                                     ("tool"
+                                                      ("uv" ("workspace" ("members" . ["invalid/foo-wb"]))))))))))
+      (should-error (uv--known-workspace-members)))))
+
 (defmacro expect-run-process-call (command &rest body)
   "Expect tool COMMAND call while executing BODY."
   (declare (indent 1))
