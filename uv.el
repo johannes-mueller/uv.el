@@ -272,7 +272,8 @@ suitable.  Use `uv-venv' instead."
   (when-let* ((pyproject-data (uv--read-project-data))
               (project-entry (gethash "project" pyproject-data)))
     (append
-     (pcase (uv--group-arg (transient-args transient-current-command))
+     (pcase (and transient-current-command
+                 (uv--group-arg (transient-args transient-current-command)))
        (`(group . ,group) (gethash group (gethash "dependency-groups" pyproject-data)))
        (`(extra . ,extra) (gethash extra (gethash "optional-dependencies" project-entry)))
        (_ (gethash "dependencies" project-entry)))
@@ -702,7 +703,7 @@ suitable.  Use `uv-lock' instead."
             (default-directory workdir))
         (apply #'make-comint-in-buffer proc-name buf (car command) nil args))
       (setq-local buffer-read-only t)
-      (setq-local buffer-file-name workdir)
+      (setq-local list-buffers-directory workdir)
       (set-process-sentinel (get-buffer-process buf) #'uv--process-sentinel))
     buf))
 

@@ -134,7 +134,7 @@
   (expect-process-call '("uv" "venv")
     (uv-venv-cmd))
   (with-current-buffer "*uv process*"
-    (should (equal buffer-file-name "/foo/bar/project/"))))
+    (should (equal list-buffers-directory "/foo/bar/project/"))))
 
 (ert-deftest uv-add-one ()
   (expect-process-call '("uv" "add" "pandas")
