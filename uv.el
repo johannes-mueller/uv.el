@@ -95,6 +95,9 @@ command functions.")
 (defvar uv--venv-create-hook nil
   "Variable to schedule venv creation after uv init finished.")
 
+(defvar uv--chosen-workspace-member nil
+  "Internal varaible to temporarily store the chosen workspace member for an operation.")
+
 (defun uv--schedule-venv-create-hook (hook-function)
   "Schedule execuion of HOOK-FUNCTION after uv process."
   (setq uv--venv-create-hook hook-function))
@@ -248,29 +251,31 @@ suitable.  Use `uv-venv' instead."
   ["venv"
   ("RET" "Create the venv" uv-venv-cmd)])
 
-(defun uv--read-project-data ()
-  "Read the `pyproject.toml' file of the project's root if it exists."
-  (when-let* ((root (uv--project-root))
-              (pyproject-file (concat (file-name-as-directory root) "pyproject.toml")))
-    (when (file-exists-p pyproject-file)
-      (tomlparse-file pyproject-file))))
+(defun uv--read-project-data (chosen-workspace-member)
+  "Read the `pyproject.toml' file of the project's root if it exists or CHOSEN-WORKSPACE-MEMBER if given."
+  (let ((workspace-member-path (when chosen-workspace-member
+                                 (concat "packages/" (file-name-as-directory chosen-workspace-member)))))
+    (when-let* ((root (uv--project-root))
+                (pyproject-file (concat (file-name-as-directory root) workspace-member-path "pyproject.toml")))
+      (when (file-exists-p pyproject-file)
+        (tomlparse-file pyproject-file)))))
 
 (defun uv--known-dependency-groups ()
   "Determine the projects known dependency-groups from pyproject.toml."
-  (when-let* ((pyproject-data (uv--read-project-data))
+  (when-let* ((pyproject-data (uv--read-project-data uv--chosen-workspace-member))
               (ht (gethash "dependency-groups" pyproject-data)))
     (hash-table-keys ht)))
 
 (defun uv--known-extras ()
   "Determine the projects known extras from pyproject.toml."
-  (when-let* ((pyproject-data (uv--read-project-data))
+  (when-let* ((pyproject-data (uv--read-project-data uv--chosen-workspace-member))
               (project-entry (gethash "project" pyproject-data))
               (ht (gethash "optional-dependencies" project-entry)))
       (hash-table-keys ht)))
 
 (defun uv--known-dependencies ()
   "Determine the projects known extras from pyproject.toml."
-  (when-let* ((pyproject-data (uv--read-project-data))
+  (when-let* ((pyproject-data (uv--read-project-data uv--chosen-workspace-member))
               (project-entry (gethash "project" pyproject-data)))
     (append
      (pcase (and transient-current-command
@@ -282,7 +287,7 @@ suitable.  Use `uv-venv' instead."
 
 (defun uv--known-workspace-members ()
   "Determine the known project workspace members."
-  (when-let* ((pyproject-data (uv--read-project-data))
+  (when-let* ((pyproject-data (uv--read-project-data nil))
               (tool-entry (gethash "tool" pyproject-data))
               (uv-entry (gethash "uv" tool-entry))
               (workspace-entry (gethash "workspace" uv-entry)))

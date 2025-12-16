@@ -199,6 +199,19 @@
                                                    ("dependency-groups" ("my-extra" . ["scipy"]) ("dev" . ["pytest>=8.3.5"]))))))))
     (should (equal-set (uv--known-dependency-groups) '("my-extra" "dev"))))))
 
+(ert-deftest known-groups-chosen-workspace-member ()
+  (let ((native-comp-enable-subr-trampolines nil)
+        (uv--chosen-workspace-member "foo-wb"))
+    (mocker-let ((project-current () ((:output (cons 'project "/foo/bar/project"))))
+                 (project-root (project) ((:input '((project . "/foo/bar/project"))
+                                           :output "/foo/bar/project")))
+                 (file-exists-p (file) ((:input '("/foo/bar/project/packages/foo-wb/pyproject.toml") :output t)))
+                 (tomlparse-file (file) ((:input '("/foo/bar/project/packages/foo-wb/pyproject.toml")
+                                        :output (alist-to-hash-table
+                                                 '(("project" ("version" . "0.1.0"))
+                                                   ("dependency-groups" ("my-extra" . ["scipy"]) ("dev" . ["pytest>=8.3.5"]))))))))
+    (should (equal-set (uv--known-dependency-groups) '("my-extra" "dev"))))))
+
 (ert-deftest known-groups-no-groups ()
   (let ((native-comp-enable-subr-trampolines nil))
     (mocker-let ((project-current () ((:output (cons 'project "/foo/bar/project"))))
@@ -221,6 +234,22 @@
                                            :output "/foo/bar/project")))
                  (file-exists-p (file) ((:input '("/foo/bar/project/pyproject.toml") :output t)))
                  (tomlparse-file (file) ((:input '("/foo/bar/project/pyproject.toml")
+                                          :output (alist-to-hash-table
+                                                   '(("project"
+                                                      ("version" . "0.1.0")
+                                                      ("optional-dependencies"
+                                                       ("my-extra" . ["scipy"])
+                                                       ("dev" . ["pytest>=8.3.5"])))))))))
+      (should (equal-set (uv--known-extras) '("my-extra" "dev"))))))
+
+(ert-deftest known-extras-chosen-workspace-member ()
+  (let ((native-comp-enable-subr-trampolines nil)
+        (uv--chosen-workspace-member "foo-wb"))
+    (mocker-let ((project-current () ((:output (cons 'project "/foo/bar/project"))))
+                 (project-root (project) ((:input '((project . "/foo/bar/project"))
+                                           :output "/foo/bar/project")))
+                 (file-exists-p (file) ((:input '("/foo/bar/project/packages/foo-wb/pyproject.toml") :output t)))
+                 (tomlparse-file (file) ((:input '("/foo/bar/project/packages/foo-wb/pyproject.toml")
                                           :output (alist-to-hash-table
                                                    '(("project"
                                                       ("version" . "0.1.0")
@@ -258,6 +287,19 @@
                                                       ("dependencies" . ["scipy" "pytest>=8.3.5"]))))))))
       (should (equal (uv--known-dependencies) '("scipy" "pytest>=8.3.5"))))))
 
+(ert-deftest known-dependencies-chosen-workspace-member ()
+  (let ((native-comp-enable-subr-trampolines nil)
+        (uv--chosen-workspace-member "foo-wb"))
+    (mocker-let ((project-current () ((:output (cons 'project "/foo/bar/project"))))
+                 (project-root (project) ((:input '((project . "/foo/bar/project"))
+                                           :output "/foo/bar/project")))
+                 (file-exists-p (file) ((:input '("/foo/bar/project/packages/foo-wb/pyproject.toml") :output t)))
+                 (tomlparse-file (file) ((:input '("/foo/bar/project/packages/foo-wb/pyproject.toml")
+                                          :output (alist-to-hash-table
+                                                   '(("project"
+                                                      ("version" . "0.1.0")
+                                                      ("dependencies" . ["scipy" "pytest>=8.3.5"]))))))))
+      (should (equal (uv--known-dependencies) '("scipy" "pytest>=8.3.5"))))))
 
 (ert-deftest known-dependencies-no-dependencies ()
   (let ((native-comp-enable-subr-trampolines nil))
@@ -384,6 +426,22 @@
 (ert-deftest known-workspace-members-simple-workspace-members ()
   (let ((transient-current-command 'uv-remove-menu)
         (native-comp-enable-subr-trampolines nil))
+    (mocker-let ((project-current () ((:output (cons 'project "/foo/bar/project"))))
+                 (project-root (project) ((:input '((project . "/foo/bar/project"))
+                                           :output "/foo/bar/project")))
+                 (file-exists-p (file) ((:input '("/foo/bar/project/pyproject.toml") :output t)))
+                 (tomlparse-file (file) ((:input '("/foo/bar/project/pyproject.toml")
+                                          :output (alist-to-hash-table
+                                                   '(("project"
+                                                      ("version" . "0.1.0"))
+                                                     ("tool"
+                                                      ("uv" ("workspace" ("members" . ["packages/foo-wb" "packages/bar-wb"]))))))))))
+      (should (equal (uv--known-workspace-members) '("foo-wb" "bar-wb"))))))
+
+(ert-deftest known-workspace-members-chosen-workspace-member ()
+  (let ((transient-current-command 'uv-remove-menu)
+        (native-comp-enable-subr-trampolines nil)
+        (uv--chosen-workspace-member "foo-wb"))
     (mocker-let ((project-current () ((:output (cons 'project "/foo/bar/project"))))
                  (project-root (project) ((:input '((project . "/foo/bar/project"))
                                            :output "/foo/bar/project")))
