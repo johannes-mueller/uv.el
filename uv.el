@@ -540,11 +540,15 @@ Example:
 
 (defun uv--run-candidates ()
   "Determine candidate commands for `uv run'."
-  (let ((default-directory (uv--project-root)))
-    (append (file-expand-wildcards "*.py")
+  (let ((default-directory (uv--project-root))
+        (package-flag (if uv--chosen-workspace-member
+                          (concat "--package " uv--chosen-workspace-member)
+                        "")))
+    (append (mapcar #'file-name-nondirectory
+                    (file-expand-wildcards (concat (uv--workspace-member-path uv--chosen-workspace-member) "*.py")))
             (string-split
              (shell-command-to-string
-              (uv--devcontainer-advise-command "uv run 2> /dev/null | sed -n 's/^- //p'"))))))
+              (uv--devcontainer-advise-command (format "uv run %s 2> /dev/null | sed -n 's/^- //p'" package-flag)))))))
 
 (defun uv--project-run-command-history ()
   "Retrieve the run command history of the current project."

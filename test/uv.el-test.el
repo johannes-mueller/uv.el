@@ -723,22 +723,38 @@ python-dateutil==2.9.0.post0
     (should (equal (uv--known-locked-packages) '("numpy==2.2.4" "pandas==2.2.3" "python-dateutil==2.9.0.post0"))))))
 
 
-(ert-deftest uv--run-candidates-no-python-script ()
-  (mocker-let ((shell-command-to-string (cmd) ((:input '("uv run 2> /dev/null | sed -n 's/^- //p'")
+(ert-deftest uv--run-candidates-no-python-script-root ()
+  (mocker-let ((shell-command-to-string (cmd) ((:input '("uv run  2> /dev/null | sed -n 's/^- //p'")
                                                 :output "foo\nbar\n")))
                (file-expand-wildcards (pattern) ((:input '("*.py") :output nil))))
     (should (equal (uv--run-candidates) '("foo" "bar")))))
 
 
-(ert-deftest uv--run-candidates-with-python-script ()
-  (mocker-let ((shell-command-to-string (cmd) ((:input '("uv run 2> /dev/null | sed -n 's/^- //p'")
+(ert-deftest uv--run-candidates-no-python-script-chosen-workspace ()
+  (let ((uv--chosen-workspace-member "foo-wb"))
+    (mocker-let ((shell-command-to-string (cmd) ((:input '("uv run --package foo-wb 2> /dev/null | sed -n 's/^- //p'")
+                                                  :output "foo\nbar\n")))
+                 (file-expand-wildcards (pattern) ((:input '("packages/foo-wb/*.py") :output nil))))
+      (should (equal (uv--run-candidates) '("foo" "bar"))))))
+
+
+(ert-deftest uv--run-candidates-with-python-script-root ()
+  (mocker-let ((shell-command-to-string (cmd) ((:input '("uv run  2> /dev/null | sed -n 's/^- //p'")
                                                 :output "foo\nbar\n")))
                (file-expand-wildcards (pattern) ((:input '("*.py")
                                                   :output '("hello.py" "goodbye.py")))))
     (should (equal (uv--run-candidates) '("hello.py" "goodbye.py" "foo" "bar")))))
 
+(ert-deftest uv--run-candidates-with-python-script-chosen-workspace ()
+  (let ((uv--chosen-workspace-member "bar-wb"))
+    (mocker-let ((shell-command-to-string (cmd) ((:input '("uv run --package bar-wb 2> /dev/null | sed -n 's/^- //p'")
+                                                  :output "foo\nbar\n")))
+                 (file-expand-wildcards (pattern) ((:input '("packages/bar-wb/*.py")
+                                                    :output '("packages/bar-wb/hello.py" "packages/bar-wb/goodbye.py")))))
+      (should (equal (uv--run-candidates) '("hello.py" "goodbye.py" "foo" "bar"))))))
+
 (ert-deftest uv--run-candidates-devcontainer ()
-  (mocker-let ((devcontainer-advise-command (cmd) ((:input '("uv run 2> /dev/null | sed -n 's/^- //p'")
+  (mocker-let ((devcontainer-advise-command (cmd) ((:input '("uv run  2> /dev/null | sed -n 's/^- //p'")
                                                     :output "devcontainer exec --workspace-folder . uv run 2> /dev/null | sed -n 's/^- //p'")))
                (shell-command-to-string (cmd) ((:input '("devcontainer exec --workspace-folder . uv run 2> /dev/null | sed -n 's/^- //p'")
                                                 :output "foo\nbar\n")))
