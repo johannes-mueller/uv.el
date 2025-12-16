@@ -35,6 +35,10 @@
   ((scope :initarg :scope))
   "A `transient-argument' to select from a list of mutually non exclusive items.")
 
+(defclass uv--transient-workspace-member-chooser (transient-option)
+  ((scope :initatg :scope))
+  " `transient-argument' to select the workspace member on which to apply the uv operation.")
+
 (defconst uv-commands (mapcar #'symbol-name
   '(run
     init
@@ -253,12 +257,16 @@ suitable.  Use `uv-venv' instead."
 
 (defun uv--read-project-data (chosen-workspace-member)
   "Read the `pyproject.toml' file of the project's root if it exists or CHOSEN-WORKSPACE-MEMBER if given."
-  (let ((workspace-member-path (when chosen-workspace-member
-                                 (concat "packages/" (file-name-as-directory chosen-workspace-member)))))
+  (let ((workspace-member-path (uv--workspace-member-path chosen-workspace-member)))
     (when-let* ((root (uv--project-root))
                 (pyproject-file (concat (file-name-as-directory root) workspace-member-path "pyproject.toml")))
       (when (file-exists-p pyproject-file)
         (tomlparse-file pyproject-file)))))
+
+(defun uv--workspace-member-path (workspace-member)
+  "Expand WORKSPACE-MEMBER to the path of the package."
+  (when workspace-member
+    (concat "packages/" (file-name-as-directory workspace-member))))
 
 (defun uv--known-dependency-groups ()
   "Determine the projects known dependency-groups from pyproject.toml."
@@ -346,6 +354,10 @@ suitable.  Use `uv-venv' instead."
     :reader (lambda (prompt initial _history)
               (completing-read prompt (uv--known-extras) initial nil)))
    ("e" "Specify extras (comma separated)" "--extra=")
+   ("p" "To package in workspace member" "--package="
+    :prompt "Choose package from workspace members: "
+    :class uv--transient-workspace-member-chooser
+    :inapt-if-not uv--known-workspace-members)
    ("a" "Sync into active virtual environment." "--active")
    ("l" "Assert that `uv.lock' will remain unchanged." "--locked")
    ("f" "Sync without updating `uv.lock'" "--frozen")]
@@ -368,6 +380,10 @@ suitable.  Use `uv-venv' instead."
     :class transient-option
     :reader (lambda (prompt initial _history)
               (completing-read prompt (uv--known-extras) initial nil)))
+   ("p" "From package in workspace member" "--package="
+    :prompt "Choose package from workspace members: "
+    :class uv--transient-workspace-member-chooser
+    :inapt-if-not uv--known-workspace-members)
    ("a" "Sync into active virtual environment." "--active")
    ("l" "Assert that `uv.lock' will remain unchanged." "--locked")
    ("f" "Sync without updating `uv.lock'" "--frozen")]
@@ -383,7 +399,7 @@ suitable.  Use `uv-add' instead."
    (let ((package (read-string "Package name: ")))
      (append (list package) (when transient-current-command (list (transient-args transient-current-command))))))
   (let ((args (when args (concat (string-join (uv--spread-comma-separated-args args "--extra=") " ") " "))))
-    (uv--do-command (concat "uv add " args  package))))
+    (uv--do-command (concat "uv add " args package))))
 
 (defun uv-remove-cmd (package &optional args)
   "Perform the `uv remove' command to remove PACKAGE with ARGS.
@@ -529,6 +545,10 @@ Example:
   [uv--dependency-options
    ["Sync options"
     ("ne" "Install editable dependencies non-editable." "--non-editable")
+    ("p" "From package in workspace member" "--package="
+     :prompt "Choose package from workspace members: "
+     :class uv--transient-workspace-member-chooser
+     :inapt-if-not uv--known-workspace-members)
     ("i" "Do not remove extraneous packages." "--inexact")
     ("a" "Sync into active virtual environment." "--active")
     ("l" "Assert that `uv.lock' will remain unchanged." "--locked")
@@ -601,6 +621,10 @@ suitable.  Use `uv-run' instead."
     ("m" "Run as a module" "--module")
     ("ne" "Install editable dependencys non-editable." "--non-editable")
     ("x" "Remove extraneous packages" "--exact")
+    ("p" "Run in workspace member" "--package="
+     :prompt "Choose package from workspace members: "
+     :class uv--transient-workspace-member-chooser
+     :inapt-if-not uv--known-workspace-members)
     ("i" "Run in an isolated virtual environment" "--isolated")
     ("a" "Run in the active virtual environment." "--active")
     ("l" "Assert that `uv.lock' will remain unchanged." "--locked")
@@ -877,6 +901,22 @@ OJB is just the self reference."
         (argument (oref obj argument)))
     (when choices
       (concat argument (string-join choices (concat " " argument))))))
+
+(cl-defmethod transient-infix-read ((obj uv--transient-workspace-member-chooser))
+  (let* ((prompt (oref obj prompt))
+         (current-choice (oref obj value))
+         (selected-item (unless current-choice (completing-read prompt (uv--known-workspace-members)))))
+    (setq uv--chosen-workspace-member selected-item)
+    selected-item))
+
+(cl-defmethod transient-infix-value ((obj uv--transient-workspace-member-chooser))
+  "Return the value of OBJ's `value' slot."
+  (when-let ((value (oref obj value)))
+    (concat (oref obj argument) value)))
+
+(cl-defmethod transient-init-value ((obj uv--transient-workspace-member-chooser))
+  (setq uv--chosen-workspace-member (uv--current-workspace-member))
+  (oset obj value uv--chosen-workspace-member))
 
 (defun uv--project-root ()
   "Save determination of the project root with `default-directory' as default."
