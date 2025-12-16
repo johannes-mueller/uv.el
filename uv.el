@@ -287,7 +287,7 @@ suitable.  Use `uv-venv' instead."
               (uv-entry (gethash "uv" tool-entry))
               (workspace-entry (gethash "workspace" uv-entry)))
     (let ((excludes (apply #'append (mapcar #'uv--expand-wildcard (gethash "exclude" workspace-entry)))))
-      (mapcar #'uv--strip-package-prefix
+      (mapcar #'uv--strip-package-prefix-or-fail
        (seq-filter (lambda (elt) (not (member elt excludes)))
                    (apply #'append (mapcar #'uv--expand-wildcard (gethash "members" workspace-entry))))))))
 
@@ -300,21 +300,27 @@ suitable.  Use `uv-venv' instead."
                 (file-expand-wildcards (concat root relative-path))))
     `(,relative-path)))
 
-(defun uv--strip-package-prefix (path)
+(defun uv--strip-package-prefix-or-fail (path)
   "Strip \"packages\" prefix from PATH and fail if it is not a prefix."
-  (when (not (string-prefix-p "packages/" path))
-    (user-error "Workspace members outside `packages` subdirectory unsupported"))
-  (substring path 9))
+  (if-let ((stripped (uv--strip-package-prefix path)))
+      stripped
+    (user-error "Workspace members outside `packages` subdirectory unsupported")))
+
+(defun uv--strip-package-prefix (path)
+  "Strip \"packages\" prefix from PATH or return `nil' if its not prefix."
+  (when (string-prefix-p "packages/" path)
+    (substring path 9)))
 
 (defun uv--current-workspace-member ()
   "Determine the workspace member of `default-directory'."
   (when-let* ((root (uv--project-root))
               (root-len (length root))
               (relative-default-dir (substring (expand-file-name (file-name-as-directory default-directory)) root-len))
+              (workspace-member (uv--strip-package-prefix relative-default-dir))
               (workspace-members (mapcar #'file-name-as-directory (uv--known-workspace-members)))
               (hit (seq-find
                     (lambda (candidate)
-                      (string-prefix-p candidate relative-default-dir))
+                      (string-prefix-p candidate workspace-member))
                     workspace-members)))
     (substring hit 0 -1)))
 
