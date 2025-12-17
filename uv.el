@@ -83,7 +83,8 @@
 (defvar uv--tool-run-history (make-hash-table :test 'equal)
   "A hash-table to store the history of uv tool runs for each project.")
 
-(defvar uv--last-tool-run-args (make-hash-table :test 'equal))
+(defvar uv--last-tool-run-args (make-hash-table :test 'equal)
+  "A hash-table to store the history of uv tool runs args for each project.")
 
 (defvar uv--projects-last-venv nil)
 
