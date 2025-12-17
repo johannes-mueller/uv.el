@@ -877,6 +877,34 @@ python-dateutil==2.9.0.post0
     (uv-deactivate-venv)
     (should-not python-shell-virtualenv-root)))
 
+(defmacro expect-process-call-devcontainer (command &rest body)
+  "Expect (compile COMMAND) while executing BODY."
+  (declare (indent 1))
+  `(let* ((stdout-buf (get-buffer-create "*uv process*"))
+          (uv-args (append '("--workspace" ".") ,command)))
+     (with-temp-buffer
+       (mocker-let ((project-current () ((:output-generator (lambda ()
+                                                               (when uv--test-project
+                                                                 (cons 'project uv--test-project))))))
+                    (project-root (project) ((:input-matcher 'always
+                                              :output-generator (lambda (project) (cdr project))
+                                              :min-occur 0)))
+                    (uv--process-get-buffer-if-available (name) ((:input `(,uv--test-process-name) :output stdout-buf)))
+                    (devcontainer-advise-command (cmd) ((:input-matcher 'always
+                                                         :output-generator (lambda (cmd) (append '("devcontainer" "--workspace" ".") cmd)))))
+                    (make-comint-in-buffer (proc-name buf cmd startfile &rest args)
+                                           ((:input (append `(,uv--test-process-name ,stdout-buf "devcontainer" nil) uv-args))))
+                    (get-buffer-process (buf) ((:input `(,stdout-buf) :output 'proc)))
+                    (set-process-sentinel (proc sentinel) ((:input '(proc uv--process-sentinel))))
+                    (process-name (proc) ((:input '(proc) :output "uv")))
+                    (message (format-string proc event) ((:input `("%s %s" "uv" ,(string-trim uv--test-cmd-result-event-string))))))
+         ,@body
+         (uv--process-sentinel 'proc uv--test-cmd-result-event-string)))))
+
+
+(ert-deftest uv-add-in-devcontainer ()
+  (expect-process-call-devcontainer '("uv" "add" "pandas")
+    (uv-add-cmd "pandas")))
 
 (provide 'uv.el-test.el)
 

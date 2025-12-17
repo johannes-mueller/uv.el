@@ -768,6 +768,7 @@ suitable.  Use `uv-lock' instead."
   "Perform COMMAND in a compint compile buffer in the project's root dir."
   (when-let* ((workdir (uv--project-root))
               (command (split-string-shell-command (string-trim command)))
+              (command (uv--devcontainer-advise-command command))
               (proc-name (uv--process-name command))
               (buf (uv--process-get-buffer-if-available proc-name)))
     (with-current-buffer buf
