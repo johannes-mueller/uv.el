@@ -37,7 +37,7 @@
 
 (defclass uv--transient-workspace-member-chooser (transient-option)
   ((scope :initatg :scope))
-  " `transient-argument' to select the workspace member on which to apply the uv operation.")
+  "A `transient-option' to select the workspace member on which to apply the uv operation.")
 
 (defconst uv-commands (mapcar #'symbol-name
   '(run
@@ -719,8 +719,6 @@ suitable.  Use `uv-sync' instead."
                 arg)))
           args))
 
-
-
  ;;;###autoload (autoload 'uv-lock "uv" nil t)
 (transient-define-prefix uv-lock ()
   "Update the project's lockfile"
@@ -866,7 +864,8 @@ suitable.  Use `uv-lock' instead."
   (setq uv--projects-last-venv nil))
 
 (cl-defmethod transient-infix-read ((obj uv--transient-multiswitch))
-  "Implement function `transient-infix-read' for OBJ."
+  "Implement `transient-infix-read' `uv--transient-multiswitch' OBJ.
+The selected item is toggled in the selection."
   (let* ((prompt (oref obj prompt))
          (choices (oref obj choices))
          (selected-item (completing-read prompt (funcall choices)))
@@ -876,7 +875,7 @@ suitable.  Use `uv-lock' instead."
       (push selected-item selection))))
 
 (cl-defmethod transient-format-value ((obj uv--transient-multiswitch))
-  "Implement function `transient-format-value' for OBJ.
+  "Implement `transient-format-value' `uv--transient-multiswitch' OBJ.
 The list of selected items is formatted in a way to present it to the user.
 OJB is just the self reference."
   (let* ((enabled-items (oref obj value))
@@ -896,13 +895,16 @@ OJB is just the self reference."
      (propertize "]" 'face 'transient-inactive-value))))
 
 (cl-defmethod transient-infix-value ((obj uv--transient-multiswitch))
-  "Join the selected multiswitch options of OBJ to a set of command line switches."
+  "Implement `transient-infix-value' `uv--transient-multiswitch' OBJ.
+Join the selected multiswitch options of OBJ to a set of command line switches."
   (let ((choices (oref obj value))
         (argument (oref obj argument)))
     (when choices
       (concat argument (string-join choices (concat " " argument))))))
 
 (cl-defmethod transient-infix-read ((obj uv--transient-workspace-member-chooser))
+  "Implement `transient-infix-read' `uv--transient-workspace-member-chooser' OBJ.
+Set the `value' of OBJ and copy it to `uv--chosen-workspace-member'."
   (let* ((prompt (oref obj prompt))
          (current-choice (oref obj value))
          (selected-item (unless current-choice (completing-read prompt (uv--known-workspace-members)))))
@@ -910,11 +912,14 @@ OJB is just the self reference."
     selected-item))
 
 (cl-defmethod transient-infix-value ((obj uv--transient-workspace-member-chooser))
-  "Return the value of OBJ's `value' slot."
+  "Implement `transient-infix-value' `uv--transient-workspace-member-chooser' OBJ.
+Return the value of OBJ's `value' slot."
   (when-let ((value (oref obj value)))
     (concat (oref obj argument) value)))
 
 (cl-defmethod transient-init-value ((obj uv--transient-workspace-member-chooser))
+  "Implement `transient-init-value' `uv--transient-workspace-member-chooser' OBJ.
+Make sure that `uv--chosen-workspace-member' is properly initialized"
   (setq uv--chosen-workspace-member (uv--current-workspace-member))
   (oset obj value uv--chosen-workspace-member))
 
