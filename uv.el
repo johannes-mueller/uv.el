@@ -820,7 +820,10 @@ suitable.  Use `uv-lock' instead."
   "Perform COMMAND either as compile or if TERMINAL is non nil in `ansi-term'."
   (let ((default-directory (uv--project-root)))
     (if terminal
-        (ansi-term command)
+        (if (and (fboundp 'devcontainer-advisable-p)
+                 (devcontainer-advisable-p))
+            (devcontainer-term command)
+          (ansi-term command))
       (temp-buffer-window-show (uv--do-command command)))))
 
 (defun uv--group-arg (args)

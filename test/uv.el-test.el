@@ -556,8 +556,20 @@
   (expect-run-process-call '("uv" "run" "--" "foo-command")
     (uv-run-cmd "foo-command")))
 
-(ert-deftest uv-run-command-ansi-term ()
-  (mocker-let ((ansi-term (cmd) ((:input '("uv run  -- foo-command")))))
+(ert-deftest uv-run-command-ansi-term-plain ()
+  (mocker-let ((ansi-term (cmd) ((:input '("uv run  -- foo-command") :occur 1))))
+    (uv-run-cmd "foo-command" '("terminal"))))
+
+(ert-deftest uv-run-command-ansi-term-devcontainer-advise ()
+  (mocker-let ((devcontainer-advisable-p () ((:output t)))
+               (ansi-term (cmd) ((:input '("uv run  -- foo-command") :occur 0)))
+               (devcontainer-term (cmd) ((:input '("uv run  -- foo-command") :occur 1))))
+    (uv-run-cmd "foo-command" '("terminal"))))
+
+(ert-deftest uv-run-command-ansi-term-devcontainer-no-advise ()
+  (mocker-let ((devcontainer-advisable-p () ((:output nil)))
+               (ansi-term (cmd) ((:input '("uv run  -- foo-command") :occur 1)))
+               (devcontainer-term (cmd) ((:input '("uv run  -- foo-command") :occur 0))))
     (uv-run-cmd "foo-command" '("terminal"))))
 
 (ert-deftest uv-run-command-history-one-project ()
