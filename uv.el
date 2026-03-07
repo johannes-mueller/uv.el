@@ -252,7 +252,8 @@ suitable.  Use `uv-venv' instead."
   :show-help (lambda (_) (uv-show-command-help "venv"))
   ["Options"
    (uv--select-python-version)
-   ("s" "Seed environment" "--seed")]
+   ("s" "Seed environment" "--seed")
+   ("c" "Clear existing venv" "--clear")]
   ["venv"
   ("RET" "Create the venv" uv-venv-cmd)])
 
