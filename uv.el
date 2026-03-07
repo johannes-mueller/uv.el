@@ -553,7 +553,8 @@ Example:
     ("i" "Do not remove extraneous packages." "--inexact")
     ("a" "Sync into active virtual environment." "--active")
     ("l" "Assert that `uv.lock' will remain unchanged." "--locked")
-    ("f" "Sync without updating `uv.lock'" "--frozen")]
+    ("f" "Sync without updating `uv.lock'" "--frozen")
+    (uv--select-python-version)]
    uv--cache-options
    uv--resolver-options]
   ["sync"
