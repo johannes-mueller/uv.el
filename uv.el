@@ -317,7 +317,7 @@ suitable.  Use `uv-venv' instead."
 
 (defun uv--strip-package-prefix-or-fail (path)
   "Strip \"packages\" prefix from PATH and fail if it is not a prefix."
-  (if-let ((stripped (uv--strip-package-prefix path)))
+  (if-let* ((stripped (uv--strip-package-prefix path)))
       stripped
     (user-error "Workspace members outside `packages` subdirectory unsupported")))
 
@@ -917,7 +917,7 @@ Set the `value' of OBJ and copy it to `uv--chosen-workspace-member'."
 (cl-defmethod transient-infix-value ((obj uv--transient-workspace-member-chooser))
   "Implement `transient-infix-value' `uv--transient-workspace-member-chooser' OBJ.
 Return the value of OBJ's `value' slot."
-  (when-let ((value (oref obj value)))
+  (when-let* ((value (oref obj value)))
     (concat (oref obj argument) value)))
 
 (cl-defmethod transient-init-value ((obj uv--transient-workspace-member-chooser))
