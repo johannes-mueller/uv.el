@@ -317,12 +317,12 @@ suitable.  Use `uv-venv' instead."
 
 (defun uv--strip-package-prefix-or-fail (path)
   "Strip \"packages\" prefix from PATH and fail if it is not a prefix."
-  (if-let ((stripped (uv--strip-package-prefix path)))
+  (if-let* ((stripped (uv--strip-package-prefix path)))
       stripped
     (user-error "Workspace members outside `packages` subdirectory unsupported")))
 
 (defun uv--strip-package-prefix (path)
-  "Strip \"packages\" prefix from PATH or return `nil' if its not prefix."
+  "Strip \"packages\" prefix from PATH or return nil if its not prefix."
   (when (string-prefix-p "packages/" path)
     (substring path 9)))
 
@@ -500,14 +500,7 @@ Example:
             (push "dev" selection))))
     (oset suffix value new-selection)))
 
-(defmacro uv--transient-define-group (name &rest groups)
-  "Temporary hack."
-  (declare (indent defun))
-  `(if (macrop 'transient-define-group)
-       (transient-define-group ,name ,@groups)
-     (defconst ,name ,@groups)))
-
-(uv--transient-define-group uv--dependency-options
+(transient-define-group uv--dependency-options
   ["Dependency options"
    (uv--extra-multiswitch)
    ("E" "(de)select all extras" uv--select-or-deselect-all-extras)
@@ -516,7 +509,7 @@ Example:
    ("d" "with dev dependency group" uv--toggle-dev-group)
    ])
 
-(uv--transient-define-group uv--cache-options
+(transient-define-group uv--cache-options
   ["Cache options"
    ("nc" "Do not use the cache" "--no-cache")
    ("r" "Refresh all cached data" "--refresh")
@@ -526,7 +519,7 @@ Example:
     :reader (lambda (prompt initial history)
               (read-string prompt initial history)))])
 
-(uv--transient-define-group uv--resolver-options
+(transient-define-group uv--resolver-options
   ["Resolver options"
    ("U" "Allow package upgrades" "--upgrade")
    ("P" "Allow upgrade for given package" "--package-upgrade "
@@ -917,7 +910,7 @@ Set the `value' of OBJ and copy it to `uv--chosen-workspace-member'."
 (cl-defmethod transient-infix-value ((obj uv--transient-workspace-member-chooser))
   "Implement `transient-infix-value' `uv--transient-workspace-member-chooser' OBJ.
 Return the value of OBJ's `value' slot."
-  (when-let ((value (oref obj value)))
+  (when-let* ((value (oref obj value)))
     (concat (oref obj argument) value)))
 
 (cl-defmethod transient-init-value ((obj uv--transient-workspace-member-chooser))
